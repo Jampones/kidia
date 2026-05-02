@@ -64,7 +64,12 @@ export default function App() {
             }
           }
         });
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes('User already registered')) {
+            throw new Error('Esta conta já existe. Tenta fazer login em vez de te registares.');
+          }
+          throw error;
+        }
         
         // Save profile data if we have it
         if (signUpData.user && pendingProfileData) {
@@ -92,10 +97,18 @@ export default function App() {
         alert('Cadastro realizado! Verifique seu e-mail para confirmar.');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            throw new Error('E-mail ou palavra-passe incorretos. Verifica se a conta existe.');
+          }
+          if (error.message.includes('Email not confirmed')) {
+            throw new Error('O teu e-mail ainda não foi confirmado. Verifica a tua caixa de entrada.');
+          }
+          throw error;
+        }
       }
     } catch (error: any) {
-      setAuthError(error.message || 'Erro na autenticação');
+      setAuthError(error.message || 'Erro inesperado na autenticação');
     }
   };
 
