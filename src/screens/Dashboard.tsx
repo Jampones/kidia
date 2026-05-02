@@ -30,7 +30,15 @@ import {
   Moon,
   Globe,
   Share2,
-  Star
+  Star,
+  RefreshCcw,
+  Sun,
+  Plus,
+  Image as ImageIcon,
+  Scan,
+  Maximize,
+  Eye,
+  Utensils
 } from 'lucide-react';
 import { askNutritionAssistant, analyzeFoodImage } from '../services/geminiService.ts';
 import { getSupabase } from '../lib/supabase.ts';
@@ -128,25 +136,35 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
     finally { setIsAnalyzing(false); }
   };
 
+  const [activePlanDay, setActivePlanDay] = useState<'hoje' | 'amanhã' | 'depois'>('hoje');
+  const [expandedMeal, setExpandedMeal] = useState<string | null>('almoço');
+
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0A0B0D] text-white">
       {/* Header */}
-      {activeTab === 'home' && (
+      {(activeTab === 'home' || activeTab === 'plan') && (
         <header className="px-6 pt-8 pb-4 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black flex items-center gap-2 tracking-tight">
-              Olá, {userProfile?.name?.split(' ')[0] || 'Convidado'} 👋
+              {activeTab === 'home' ? `Olá, ${userProfile?.name?.split(' ')[0] || 'Convidado'} 👋` : 'Plano alimentar'}
             </h1>
             <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mt-1">
-              Sábado, 02 De Maio
+              {activeTab === 'home' ? 'Sábado, 02 De Maio' : 'Alimentação equilibrada - 2000 kcal/dia'}
             </p>
           </div>
-          <div className="relative">
-            <div className="p-3 bg-white/5 rounded-2xl border border-white/5 relative">
-              <Bell size={20} className="text-white/40" />
+          {activeTab === 'home' ? (
+            <div className="relative">
+              <div className="p-3 bg-white/5 rounded-2xl border border-white/5 relative">
+                <Bell size={20} className="text-white/40" />
+              </div>
+              <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#FF4F4F] rounded-full border-2 border-[#0A0B0D]" />
             </div>
-            <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#FF4F4F] rounded-full border-2 border-[#0A0B0D]" />
-          </div>
+          ) : (
+            <button className="flex flex-col items-center justify-center w-14 h-14 bg-white/5 border-2 border-[#4ADE80] rounded-2xl text-[#4ADE80] gap-1 group active:scale-95 transition-all">
+              <RefreshCcw size={16} strokeWidth={3} className="group-hover:rotate-180 transition-transform duration-500" />
+              <span className="text-[7px] font-black uppercase text-center leading-[1.1] px-1">Receber Plano</span>
+            </button>
+          )}
         </header>
       )}
 
@@ -242,10 +260,10 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
               </button>
 
               {/* Specialist Tip */}
-              <div className="p-6 bg-[#1a1710] border border-[#FFB800]/20 rounded-3xl relative overflow-hidden">
+              <div className="p-6 bg-[#1a1710] border border-[#FFB800]/20 rounded-[32px] relative overflow-hidden">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 bg-[#FFB800]/10 rounded-xl flex items-center justify-center">
-                    <Activity className="text-[#FFB800]" size={20} />
+                    <Zap className="text-[#FFB800]" size={20} fill="#FFB800" fillOpacity={0.2} />
                   </div>
                   <div>
                     <h3 className="text-[#FFB800] font-black text-xs uppercase tracking-widest">Dica do Especialista</h3>
@@ -253,21 +271,86 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
                   </div>
                 </div>
                 <p className="text-white/60 text-xs font-medium leading-relaxed italic">
-                  "Beber água antes das refeições ajuda a controlar as porções e melhora a digestão. Tenta beber 2L por dia!"
+                  "Beber água antes das refeições ajuda a controlar as porções e o corpo vai agradecer!"
                 </p>
               </div>
 
-              {/* Challenge Card */}
-              <div className="p-6 bg-[#121417] border border-white/5 rounded-3xl">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="text-2xl">🚭</div>
-                    <h3 className="font-black text-sm">7 Dias Sem Açúcar</h3>
-                  </div>
-                  <span className="text-[#FF4F4F] font-black text-xs">3/7 dias</span>
+              {/* Today's Plan Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-lg font-black tracking-tight">Plano de hoje</h3>
+                  <button onClick={() => setActiveTab('plan')} className="text-[#4ADE80] text-[10px] font-black uppercase tracking-widest">Ver tudo</button>
                 </div>
-                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                  <div className="w-[42%] h-full bg-[#FF4F4F] rounded-full" />
+                <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 no-scrollbar">
+                  <MealThumbCard 
+                    image="https://images.unsplash.com/photo-1590301157890-4810ed352733?q=80&w=400&auto=format&fit=crop"
+                    time="07:00"
+                    label="Café da manhã"
+                    name="Papaia com Iogurte"
+                    kcal="280 kcal"
+                  />
+                  <MealThumbCard 
+                    image="https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?q=80&w=400&auto=format&fit=crop"
+                    time="12:30"
+                    label="Almoço"
+                    name="Mufete Completo"
+                    kcal="620 kcal"
+                    active
+                  />
+                  <MealThumbCard 
+                    image="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400&auto=format&fit=crop"
+                    time="19:00"
+                    label="Jantar"
+                    name="Calulu de Peixe"
+                    kcal="480 kcal"
+                  />
+                </div>
+              </div>
+
+              {/* Habit Challenges Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-lg font-black tracking-tight">Desafios de Hábito</h3>
+                  <button className="text-[#4ADE80] text-[10px] font-black uppercase tracking-widest">Ver todos</button>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <ChallengeThumbCard 
+                    icon={<div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">🚭</div>}
+                    title="7 dias"
+                    status="Em progresso"
+                    color="#FF4F4F"
+                    active
+                  />
+                  <ChallengeThumbCard 
+                    icon={<div className="w-10 h-10 rounded-full bg-[#00D1FF]/10 flex items-center justify-center text-[#00D1FF]"><Droplets size={20} /></div>}
+                    title="14 dias"
+                    status="Participar"
+                    color="#00D1FF"
+                  />
+                </div>
+              </div>
+
+              {/* Recent Analysis Section */}
+              <div className="space-y-4 pb-12">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-lg font-black tracking-tight">Últimas análises</h3>
+                  <button className="text-[#4ADE80] text-[10px] font-black uppercase tracking-widest">Ver tudo</button>
+                </div>
+                <div className="space-y-3">
+                  <AnalysisRow 
+                    image="https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?q=80&w=150"
+                    name="Mufete com Funge"
+                    info="620 kcal • Almoço"
+                    date="01/05/2026"
+                    score={91}
+                  />
+                  <AnalysisRow 
+                    image="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=150"
+                    name="Arroz com Feijão e Frango"
+                    info="540 kcal • Almoço"
+                    date="01/05/2026"
+                    score={85}
+                  />
                 </div>
               </div>
 
@@ -275,9 +358,127 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
           )}
 
           {activeTab === 'plan' && (
-            <div className="flex-1 flex items-center justify-center text-white/20">
-              <p>Funcionalidade em desenvolvimento 📅</p>
-            </div>
+            <motion.div key="plan" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6 pt-2 pb-12">
+              
+              {/* Day Selector */}
+              <div className="flex gap-2 p-1.5 bg-white/5 rounded-2xl border border-white/[0.03]">
+                <button 
+                  onClick={() => setActivePlanDay('hoje')}
+                  className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${activePlanDay === 'hoje' ? 'bg-[#4ADE80] text-[#0A0B0D]' : 'text-white/30 hover:text-white'}`}
+                >
+                  Hoje
+                </button>
+                <button 
+                  onClick={() => setActivePlanDay('amanhã')}
+                  className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${activePlanDay === 'amanhã' ? 'bg-[#4ADE80] text-[#0A0B0D]' : 'text-white/30 hover:text-white'}`}
+                >
+                  Amanhã
+                </button>
+                <button 
+                  onClick={() => setActivePlanDay('depois')}
+                  className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${activePlanDay === 'depois' ? 'bg-[#4ADE80] text-[#0A0B0D]' : 'text-white/30 hover:text-white'}`}
+                >
+                  Depois
+                </button>
+              </div>
+
+              {/* Stats Card */}
+              <div className="bg-[#121417] border border-white/5 rounded-[32px] p-8 shadow-xl">
+                 <div className="flex justify-between items-center mb-8">
+                    <div className="text-center">
+                      <span className="text-2xl font-black block leading-none">1600</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/20 mt-1 block">kcal no plano</span>
+                    </div>
+                    <div className="h-10 w-[1px] bg-white/10" />
+                    <div className="text-center">
+                      <span className="text-2xl font-black block leading-none">2000</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/20 mt-1 block">kcal objectivo</span>
+                    </div>
+                    <div className="h-10 w-[1px] bg-white/10" />
+                    <div className="text-center">
+                      <span className="text-2xl font-black block leading-none text-[#FF4F4F]">-400</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/20 mt-1 block">diferença</span>
+                    </div>
+                 </div>
+                 <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div className="w-[80%] h-full bg-[#4ADE80] rounded-full shadow-[0_0_12px_rgba(74,222,128,0.5)]" />
+                 </div>
+              </div>
+
+              {/* Meals List */}
+              <div className="space-y-3">
+                 <MealCard 
+                    icon={<Sun size={18} />} 
+                    label="Café da manhã" 
+                    time="07:00" 
+                    kcal="280 kcal" 
+                    isOpen={expandedMeal === 'café'}
+                    onToggle={() => setExpandedMeal(expandedMeal === 'café' ? null : 'café')}
+                 />
+                 
+                 <MealCard 
+                    icon={<Sun size={18} />} 
+                    label="Almoço" 
+                    time="12:30" 
+                    kcal="620 kcal" 
+                    isOpen={expandedMeal === 'almoço'}
+                    onToggle={() => setExpandedMeal(expandedMeal === 'almoço' ? null : 'almoço')}
+                    details={{
+                      image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?q=80&w=600&auto=format&fit=crop",
+                      title: "Mufete Completo",
+                      description: "Peixe grelhado (tilápia ou cacusso), funge de milho, feijão de óleo de palma e banana da terra. O prato mais nutritivo de Angola!",
+                      tags: ['Proteína', 'Ferro', 'Energia', 'Tradicional'],
+                      prepTime: "35 min preparo"
+                    }}
+                 />
+
+                 <MealCard 
+                    icon={<Moon size={18} />} 
+                    label="Jantar" 
+                    time="19:00" 
+                    kcal="480 kcal" 
+                    isOpen={expandedMeal === 'jantar'}
+                    onToggle={() => setExpandedMeal(expandedMeal === 'jantar' ? null : 'jantar')}
+                 />
+
+                 <MealCard 
+                    icon={<Coffee size={18} />} 
+                    label="Lanche" 
+                    time="15:30" 
+                    kcal="220 kcal" 
+                    isOpen={expandedMeal === 'lanche'}
+                    onToggle={() => setExpandedMeal(expandedMeal === 'lanche' ? null : 'lanche')}
+                 />
+              </div>
+
+              {/* Personalized Plan CTA */}
+              <button className="w-full p-6 bg-[#FFB800] rounded-[32px] flex items-center justify-between group shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
+                <div className="flex items-center gap-4 text-left">
+                  <div className="w-12 h-12 bg-[#0A0B0D]/10 rounded-2xl flex items-center justify-center">
+                    <Calendar className="text-[#0A0B0D]" size={24} strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-[#0A0B0D] text-sm leading-tight">Receber Plano Personalizado</h3>
+                    <p className="text-[#0A0B0D]/50 text-[9px] font-bold leading-tight mt-1 uppercase tracking-tight">Plano semanal adaptado ao teu perfil e objectivos</p>
+                  </div>
+                </div>
+                <ChevronRight className="text-[#0A0B0D]" size={20} strokeWidth={3} />
+              </button>
+
+              {/* Nutritional Tip card */}
+              <div className="p-6 bg-[#1a1710] border border-[#FFB800]/20 rounded-[32px]">
+                 <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-[#FFB800]/10 rounded-2xl flex items-center justify-center">
+                       <Zap className="text-[#FFB800]" size={20} fill="#FFB800" fillOpacity={0.2} />
+                    </div>
+                    <span className="text-[#FFB800] font-black text-xs uppercase tracking-widest">Dica nutricional</span>
+                 </div>
+                 <p className="text-white/60 text-xs font-medium leading-[1.6]">
+                    O Mufete angolano é considerado um dos pratos mais completos nutricionalmente! Rico em proteína do peixe, ferro do feijão e energia do funge — perfeito para um almoço de alta performance.
+                 </p>
+              </div>
+
+            </motion.div>
           )}
 
           {activeTab === 'community' && (
@@ -434,6 +635,119 @@ function HomeIcon({ active }: { active: boolean }) {
   );
 }
 
+function MealCard({ icon, label, time, kcal, isOpen, onToggle, details }: { icon: any, label: string, time: string, kcal: string, isOpen: boolean, onToggle: () => void, details?: any }) {
+  return (
+    <div className={`bg-[#121417] border border-white/5 rounded-[32px] overflow-hidden transition-all duration-300 ${isOpen ? 'shadow-2xl' : 'shadow-sm'}`}>
+      <button onClick={onToggle} className="w-full p-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isOpen ? 'bg-[#FFB800]/20 text-[#FFB800]' : 'bg-white/5 text-white/20'}`}>
+              {icon}
+           </div>
+           <div className="text-left">
+              <h4 className="text-sm font-black text-white">{label}</h4>
+              <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mt-1">{time}</p>
+           </div>
+        </div>
+        <div className="flex items-center gap-3">
+           <span className={`text-[12px] font-black ${isOpen ? 'text-[#4ADE80]' : 'text-white/30'}`}>{kcal}</span>
+           <ChevronRight size={18} className={`text-white/10 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+        </div>
+      </button>
+      
+      {isOpen && details && (
+        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="px-1 py-1 pb-4">
+           <div className="bg-[#0A0B0D] rounded-[28px] overflow-hidden m-2 border border-white/[0.05]">
+             <div className="relative aspect-video">
+                <img src={details.image} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0B0D] via-transparent to-transparent" />
+             </div>
+             <div className="p-6 pt-2">
+                <h3 className="text-xl font-black text-white leading-tight mb-3">{details.title}</h3>
+                <p className="text-white/40 text-xs font-medium leading-relaxed mb-6 italic">
+                  {details.description}
+                </p>
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {details.tags.map((t: string) => (
+                    <span key={t} className="px-4 py-2 bg-[#4ADE80]/10 text-[#4ADE80] text-[9px] font-black rounded-xl border border-[#4ADE80]/10 uppercase tracking-widest">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between pt-6 border-t border-white/[0.03]">
+                  <div className="flex items-center gap-2 text-white/20">
+                     <History size={14} />
+                     <span className="text-[10px] font-bold uppercase tracking-widest">{details.prepTime}</span>
+                  </div>
+                  <button className="px-6 py-3 bg-[#4ADE80] text-[#0A0B0D] text-[10px] font-black rounded-2xl flex items-center gap-2 active:scale-95 transition-all shadow-lg shadow-[#4ADE80]/10">
+                     <Plus size={14} strokeWidth={4} /> Adicionar ao diário
+                  </button>
+                </div>
+             </div>
+           </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+function MealThumbCard({ image, time, label, name, kcal, active }: { image: string, time: string, label: string, name: string, kcal: string, active?: boolean }) {
+  return (
+    <div className={`relative min-w-[160px] h-56 rounded-[32px] overflow-hidden group border-2 transition-all ${active ? 'border-[#4ADE80] shadow-2xl shadow-[#4ADE80]/10 scale-105 z-10' : 'border-white/5 opacity-80'}`}>
+      <img src={image} className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-110" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0A0B0D] via-[#0A0B0D]/20 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 p-4">
+        <div className="flex flex-col gap-0.5">
+           <span className="text-[#4ADE80] text-[8px] font-black uppercase tracking-widest">{time}</span>
+           <span className="text-white/40 text-[7px] font-bold uppercase tracking-tighter">{label}</span>
+           <h4 className="text-xs font-black text-white leading-tight mt-1 line-clamp-1 uppercase">{name}</h4>
+           <span className="text-[#FFB800] text-[10px] font-black mt-1">{kcal}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChallengeThumbCard({ icon, title, status, color, active }: { icon: any, title: string, status: string, color: string, active?: boolean }) {
+  return (
+    <div className="p-6 bg-[#121417] border border-white/5 rounded-[32px] relative overflow-hidden group" style={{ borderColor: active ? `${color}40` : '' }}>
+       <div className="flex flex-col items-center gap-3 relative z-10">
+          {icon}
+          <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">{title}</span>
+          <button 
+            className="w-full py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all"
+            style={{ 
+              backgroundColor: active ? `${color}20` : 'transparent', 
+              color: color,
+              border: `1.5px solid ${active ? 'transparent' : `${color}40`}`
+            }}
+          >
+            {status}
+          </button>
+       </div>
+       <div className="absolute -bottom-4 -right-4 w-16 h-16 rounded-full blur-3xl opacity-10 group-hover:opacity-30 transition-opacity" style={{ backgroundColor: color }} />
+    </div>
+  );
+}
+
+function AnalysisRow({ image, name, info, date, score }: { image: string, name: string, info: string, date: string, score: number }) {
+  return (
+    <div className="p-4 bg-[#121417] border border-white/5 rounded-[32px] flex items-center gap-4 group hover:bg-white/[0.02] transition-colors">
+      <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shrink-0">
+        <img src={image} className="w-full h-full object-cover" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <h4 className="text-sm font-black text-white truncate uppercase tracking-tight">{name}</h4>
+        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mt-0.5">{info}</p>
+        <p className="text-[8px] font-bold text-white/10 uppercase mt-1">{date}</p>
+      </div>
+      <div className="w-12 h-12 rounded-full border-2 border-white/5 flex items-center justify-center relative bg-black/20 group-hover:border-[#4ADE80]/30 transition-colors">
+        <span className="text-sm font-black text-[#4ADE80]">{score}</span>
+        <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#4ADE80] animate-spin-slow opacity-0 group-hover:opacity-50" />
+      </div>
+    </div>
+  );
+}
+
 function NavButton({ active, icon, label, onClick }: { active: boolean, icon: any, label: string, onClick: () => void }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-1">
@@ -486,22 +800,115 @@ function Overlay({ title, onClose, children }: { title: string, onClose: () => v
 }
 
 function ScannerContent({ previewUrl, isAnalyzing, scannerResult, onUpload, onClose, fileInputRef }: any) {
+  const [selectedMealType, setSelectedMealType] = useState('almoço');
+
+  const mealTypes = [
+    { id: 'café', label: 'Café da manhã', time: '7:00 - 10:00', ex: 'Ex: Papaia, pão, ovos', icon: <Sun size={18} /> },
+    { id: 'almoço', label: 'Almoço', time: '11:30 - 14:00', ex: 'Ex: Mufete, arroz e feijão', icon: <Sun size={18} className="text-[#4ADE80]" /> },
+    { id: 'jantar', label: 'Jantar', time: '18:00 - 21:00', ex: 'Ex: Calulu, sopa', icon: <Moon size={18} /> },
+    { id: 'lanche', label: 'Lanche', time: 'Qualquer hora', ex: 'Ex: Amendoim, fruta', icon: <Coffee size={18} /> },
+  ];
+
   return (
-    <div className="p-6 h-full flex flex-col">
+    <div className="p-6 h-full flex flex-col space-y-8">
        {!previewUrl ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center">
-            <div className="w-32 h-32 rounded-[40px] bg-white/5 border border-dashed border-white/20 mb-8 flex items-center justify-center cursor-pointer hover:border-[#4ADE80] transition-all group" onClick={() => fileInputRef.current?.click()}>
-              <Upload className="text-white/40 group-hover:text-[#4ADE80] transition-colors" size={40} />
+          <>
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black text-white">Analisar refeição</h2>
+              <p className="text-white/30 text-sm font-medium">Fotografa o teu prato para uma análise completa</p>
             </div>
-            <h3 className="text-2xl font-black mb-4">Câmera de Nutrição</h3>
-            <p className="text-white/30 text-sm mb-12 max-w-[240px] font-medium leading-relaxed">
-              Tira uma foto do teu prato para descobrirmos tudo o que ele tem.
-            </p>
-            <button onClick={() => fileInputRef.current?.click()} className="w-full py-6 bg-[#4ADE80] text-[#0A0B0D] font-black rounded-3xl shadow-2xl shadow-[#4ADE80]/10 flex items-center justify-center gap-3">
-              <Camera size={24} strokeWidth={3} /> ABRIR CÂMERA
-            </button>
+
+            {/* Main Capture Card */}
+            <div className="relative rounded-[40px] overflow-hidden aspect-[4/3] bg-[#121417] border border-white/5 group shadow-2xl">
+              <img 
+                src="https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?q=80&w=800&auto=format&fit=crop" 
+                className="absolute inset-0 w-full h-full object-cover opacity-30 grayscale" 
+                alt="Background"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0B0D] via-[#0A0B0D]/40 to-transparent" />
+              
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-20 h-20 bg-[#4ADE80]/10 rounded-full flex items-center justify-center border-4 border-[#4ADE80] mb-6 shadow-[0_0_30px_rgba(74,222,128,0.3)] active:scale-90 transition-transform"
+                >
+                  <Camera className="text-[#4ADE80]" size={32} strokeWidth={2.5} />
+                </button>
+                <h3 className="text-xl font-black text-white mb-2 uppercase tracking-tight">Fotografa o teu prato</h3>
+                <p className="text-white/40 text-[10px] font-bold leading-relaxed max-w-[220px]">
+                  Aponta a câmara para a refeição e recebe a análise nutricional completa em segundos
+                </p>
+
+                <div className="flex gap-4 mt-8 w-full">
+                  <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-4 bg-[#4ADE80]/10 border-2 border-[#4ADE80] rounded-[24px] flex items-center justify-center gap-2 text-[#4ADE80] font-black text-xs uppercase tracking-widest shadow-xl">
+                    <Camera size={16} /> Câmara
+                  </button>
+                  <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-4 bg-[#FFB800]/10 border-2 border-[#FFB800] rounded-[24px] flex items-center justify-center gap-2 text-[#FFB800] font-black text-xs uppercase tracking-widest shadow-xl">
+                    <ImageIcon size={16} /> Galeria
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Meal Type Selection */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-black text-white/40 uppercase tracking-widest">Tipo de refeição</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {mealTypes.map(type => (
+                  <button 
+                    key={type.id}
+                    onClick={() => setSelectedMealType(type.id)}
+                    className={`p-5 rounded-[28px] border-2 text-left transition-all ${selectedMealType === type.id ? 'bg-[#4ADE80]/5 border-[#4ADE80]' : 'bg-[#121417] border-white/5 opacity-60'}`}
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className={selectedMealType === type.id ? 'text-[#4ADE80]' : 'text-white/20'}>{type.icon}</div>
+                    </div>
+                    <h4 className={`text-xs font-black ${selectedMealType === type.id ? 'text-[#4ADE80]' : 'text-white'}`}>{type.label}</h4>
+                    <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest mt-1">{type.time}</p>
+                    <p className="text-[8px] font-medium text-white/40 italic mt-1">{type.ex}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tips Card */}
+            <div className="p-8 bg-[#121417] border border-white/5 rounded-[32px] space-y-5">
+              <h3 className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">Como obter a melhor análise</h3>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Sun size={18} className="text-[#4ADE80]" />
+                  <span className="text-xs font-bold text-white/60">Boa iluminação melhora muito a precisão</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Maximize size={18} className="text-[#4ADE80]" />
+                  <span className="text-xs font-bold text-white/60">Enquadra todo o prato na foto</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Eye size={18} className="text-[#4ADE80]" />
+                  <span className="text-xs font-bold text-white/60">Evita sombras ou reflexos</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Utensils size={18} className="text-[#4ADE80]" />
+                  <span className="text-xs font-bold text-white/60">Funciona com pratos angolanos e internacionais</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="space-y-3 pt-4 pb-20">
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-6 bg-[#4ADE80] text-[#0A0B0D] font-black rounded-[32px] flex items-center justify-center gap-3 shadow-2xl shadow-[#4ADE80]/10 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                <Camera size={22} strokeWidth={3} /> ABRIR CÂMERA
+              </button>
+              <button className="w-full py-6 border-2 border-[#4ADE80] text-[#4ADE80] font-black rounded-[32px] flex items-center justify-center gap-3 hover:bg-[#4ADE80]/5 transition-all">
+                <Scan size={22} strokeWidth={3} /> IDENTIFICAR PRODUTO RAPIDAMENTE
+              </button>
+            </div>
+
             <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={onUpload} />
-          </div>
+          </>
         ) : (
           <div className="space-y-6">
             <div className="relative rounded-[32px] overflow-hidden border border-white/10 aspect-square bg-[#121417] shadow-2xl">
