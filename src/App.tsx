@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -17,9 +12,13 @@ import {
   Loader2,
   Apple,
   Dna,
-  Heart
+  Heart,
+  LogOut,
+  History
 } from 'lucide-react';
 import { askNutritionAssistant, analyzeFoodImage } from './services/geminiService.ts';
+import { getSupabase } from './lib/supabase.ts';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface Message {
   role: 'user' | 'model';
@@ -36,22 +35,122 @@ interface AnalysisResult {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'scanner'>('chat');
+  const [session, setSession] = useState<SupabaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [configMissing, setConfigMissing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chat' | 'scanner' | 'history'>('chat');
+  
+  // Cache supabase instance
+  const getClient = () => {
+    try {
+      return getSupabase();
+    } catch (e) {
+      if (e instanceof Error && e.message === 'CONFIG_MISSING') {
+        setConfigMissing(true);
+      }
+      return null;
+    }
+  };
+
   const [messages, setMessages] = useState<Message[]>([
     { role: 'model', text: 'Olá! Sou seu assistente de nutrição Neon. Como posso ajudar com sua dieta hoje?' }
   ]);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage('');
+    const supabase = getClient();
+    if (!supabase) return;
+
+    try {
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        alert('Verifique seu email para confirmar o cadastro!');
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      }
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Erro na autenticação');
+    }
+  };
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [scannerResult, setScannerResult] = useState<AnalysisResult | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [scanHistory, setScanHistory] = useState<any[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Auth Listener
+  useEffect(() => {
+    const supabase = getClient();
+    if (!supabase) {
+      setAuthLoading(false);
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Scroll to bottom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Load History from Supabase
+  useEffect(() => {
+    if (session) {
+      loadChatHistory();
+      loadScanHistory();
+    }
+  }, [session]);
+
+  const loadChatHistory = async () => {
+    const supabase = getClient();
+    if (!session || !supabase) return;
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('user_id', session.id)
+      .order('created_at', { ascending: true });
+
+    if (data && data.length > 0) {
+      const formatted = data.map((m: any) => ({
+        role: m.sender === 'user' ? 'user' : 'model',
+        text: m.text
+      }));
+      setMessages(formatted);
+    }
+  };
+
+  const loadScanHistory = async () => {
+    const supabase = getClient();
+    if (!session || !supabase) return;
+    const { data, error } = await supabase
+      .from('scan_history')
+      .select('*')
+      .eq('user_id', session.id)
+      .order('created_at', { ascending: false });
+
+    if (data) setScanHistory(data);
+  };
 
   const handleSendMessage = async () => {
     if (!input.trim() || isTyping) return;
@@ -61,15 +160,37 @@ export default function App() {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setIsTyping(true);
 
+    const supabase = getClient();
+    // Save user message to Supabase
+    if (session && supabase) {
+      await supabase.from('chat_messages').insert({
+        user_id: session.id,
+        text: userMsg,
+        sender: 'user',
+        type: 'text'
+      });
+    }
+
     try {
-      // Map history for Gemini API
       const history = messages.map(m => ({
         role: m.role,
         parts: [{ text: m.text }]
       }));
       
       const response = await askNutritionAssistant(userMsg, history);
-      setMessages(prev => [...prev, { role: 'model', text: response || 'Desculpe, tive um erro no sistema.' }]);
+      const aiText = response || 'Desculpe, tive um erro no sistema.';
+      
+      setMessages(prev => [...prev, { role: 'model', text: aiText }]);
+
+      // Save AI message to Supabase
+      if (session && supabase) {
+        await supabase.from('chat_messages').insert({
+          user_id: session.id,
+          text: aiText,
+          sender: 'specialist',
+          type: 'text'
+        });
+      }
     } catch (error) {
       setMessages(prev => [...prev, { role: 'model', text: 'Falha na conexão com a IA.' }]);
     } finally {
@@ -95,6 +216,23 @@ export default function App() {
     try {
       const result = await analyzeFoodImage(base64);
       setScannerResult(result);
+
+      const supabase = getClient();
+      // Save to Supabase Scan History
+      if (session && supabase) {
+        await supabase.from('scan_history').insert({
+          user_id: session.id,
+          date: new Date().toISOString().split('T')[0],
+          item_name: result.name,
+          calories: parseFloat(result.calories) || 0,
+          protein: parseFloat(result.protein) || 0,
+          carbs: parseFloat(result.carbs) || 0,
+          fat: parseFloat(result.fat) || 0,
+          recommendation: result.healthTip,
+          image_url: base64.length < 100000 ? base64 : null
+        });
+        loadScanHistory();
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -102,14 +240,103 @@ export default function App() {
     }
   };
 
-  const resetScanner = () => {
-    setPreviewUrl(null);
-    setScannerResult(null);
-    setIsAnalyzing(false);
+  const logout = async () => {
+    const supabase = getClient();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
   };
 
+  if (configMissing) {
+    return (
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center p-6 text-center">
+        <div className="max-w-md space-y-6">
+          <div className="w-20 h-20 bg-neon-green/20 rounded-full mx-auto flex items-center justify-center neon-border">
+            <Zap className="text-neon-green" size={40} />
+          </div>
+          <h1 className="text-3xl font-bold neon-text">Configuração Necessária</h1>
+          <p className="text-white/60 leading-relaxed">
+            Para conectar ao seu banco de dados Supabase, adicione as seguintes variáveis no painel <strong className="text-white">Secrets</strong>:
+          </p>
+          <div className="bg-white/5 p-4 rounded-xl font-mono text-left text-xs space-y-2 border border-white/10">
+            <p className="text-neon-green">VITE_SUPABASE_URL</p>
+            <p className="text-neon-green">VITE_SUPABASE_ANON_KEY</p>
+          </div>
+          <p className="text-white/40 text-sm italic">
+            Obtenha estas chaves em: Settings {">"} API no seu dashboard do Supabase.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
+        <Loader2 className="text-neon-green animate-spin" size={40} />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center p-6">
+        <div className="w-full max-w-sm glass-card neon-border rounded-3xl p-8 text-center">
+          <div className="w-16 h-16 bg-neon-green rounded-2xl mx-auto mb-6 flex items-center justify-center neon-glow">
+            <Zap size={32} className="text-black" />
+          </div>
+          <h1 className="text-3xl font-bold neon-text mb-2 tracking-tight uppercase font-mono">NeonNutri</h1>
+          <p className="text-white/40 text-sm mb-8">Baseado no seu Supabase</p>
+          
+          <form onSubmit={handleAuth} className="space-y-4 text-left">
+            <div>
+              <label className="text-[10px] uppercase font-mono text-white/40 ml-2 mb-1 block">Email</label>
+              <input 
+                type="email" 
+                required
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-neon-green focus:outline-none transition-colors"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase font-mono text-white/40 ml-2 mb-1 block">Senha</label>
+              <input 
+                type="password" 
+                required
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-neon-green focus:outline-none transition-colors"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            
+            {errorMessage && (
+              <p className="text-red-500 text-[10px] uppercase font-mono text-center">{errorMessage}</p>
+            )}
+
+            <button 
+              type="submit"
+              className="w-full py-4 bg-neon-green text-black font-bold rounded-xl neon-glow hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              {isSignUp ? 'CRIAR CONTA' : 'ENVIAR'}
+            </button>
+          </form>
+
+          <button 
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="mt-6 text-[10px] font-mono text-white/40 uppercase hover:text-neon-green transition-colors"
+          >
+            {isSignUp ? 'Já tem conta? Entrar' : 'Não tem conta? Cadastrar'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div id="neon-app" className="min-h-screen flex flex-col max-w-lg mx-auto border-x border-white/5 bg-dark-bg">
+    <div id="neon-app" className="min-h-screen flex flex-col max-w-lg mx-auto border-x border-white/5 bg-dark-bg relative">
       {/* Header */}
       <header className="p-6 border-b border-white/5 flex items-center justify-between sticky top-0 z-50 glass-card">
         <div className="flex items-center gap-3">
@@ -120,75 +347,40 @@ export default function App() {
             <h1 className="text-xl font-bold tracking-tight uppercase font-mono neon-text">NeonNutri</h1>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse"></span>
-              <p className="text-[10px] text-white/50 uppercase tracking-widest font-mono">IA Ativa</p>
+              <p className="text-[10px] text-white/50 uppercase tracking-widest font-mono">ON: {session.email?.split('@')[0]}</p>
             </div>
           </div>
         </div>
         <div className="flex gap-1 p-1 bg-white/5 rounded-lg">
-          <button 
-            onClick={() => setActiveTab('chat')}
-            className={`p-2 rounded-md transition-all ${activeTab === 'chat' ? 'bg-neon-green text-black' : 'text-white/40 hover:text-white'}`}
-          >
-            <MessageSquare size={20} />
-          </button>
-          <button 
-            onClick={() => setActiveTab('scanner')}
-            className={`p-2 rounded-md transition-all ${activeTab === 'scanner' ? 'bg-neon-green text-black' : 'text-white/40 hover:text-white'}`}
-          >
-            <Camera size={20} />
+          <TabButton active={activeTab === 'chat'} icon={<MessageSquare size={18} />} onClick={() => setActiveTab('chat')} />
+          <TabButton active={activeTab === 'scanner'} icon={<Camera size={18} />} onClick={() => setActiveTab('scanner')} />
+          <TabButton active={activeTab === 'history'} icon={<History size={18} />} onClick={() => setActiveTab('history')} />
+          <button onClick={logout} className="p-2 text-white/40 hover:text-red-500 transition-colors">
+            <LogOut size={18} />
           </button>
         </div>
       </header>
 
       <main className="flex-1 overflow-hidden relative flex flex-col">
         <AnimatePresence mode="wait">
-          {activeTab === 'chat' ? (
-            <motion.div 
-              key="chat"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="flex-1 flex flex-col p-4 overflow-y-auto"
-            >
+          {activeTab === 'chat' && (
+            <motion.div key="chat" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col p-4 overflow-y-auto">
               <div className="space-y-6">
                 {messages.map((m, i) => (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    key={i} 
-                    className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed ${
-                      m.role === 'user' 
-                        ? 'bg-neon-green text-black font-medium' 
-                        : 'glass-card neon-border text-white/90'
-                    }`}>
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed ${m.role === 'user' ? 'bg-neon-green text-black font-medium' : 'glass-card neon-border text-white/90'}`}>
                       {m.text}
                     </div>
                   </motion.div>
                 ))}
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="glass-card neon-border p-4 rounded-2xl">
-                      <div className="flex gap-1 items-center">
-                        <span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-bounce"></span>
-                        <span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-bounce delay-75"></span>
-                        <span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-bounce delay-150"></span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {isTyping && <div className="flex justify-start"><div className="glass-card neon-border p-4 rounded-2xl"><div className="flex gap-1 items-center"><span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-bounce"></span><span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-bounce delay-75"></span><span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-bounce delay-150"></span></div></div></div>}
                 <div ref={chatEndRef} />
               </div>
             </motion.div>
-          ) : (
-            <motion.div 
-              key="scanner"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="flex-1 p-6 flex flex-col overflow-y-auto"
-            >
+          )}
+
+          {activeTab === 'scanner' && (
+            <motion.div key="scanner" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex-1 p-6 flex flex-col overflow-y-auto">
               {!previewUrl ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center">
                   <div className="w-32 h-32 rounded-full bg-white/5 border-2 border-dashed border-neon-green/30 mb-6 flex items-center justify-center group hover:border-neon-green transition-all cursor-pointer" onClick={() => fileInputRef.current?.click()}>
@@ -196,78 +388,54 @@ export default function App() {
                   </div>
                   <h3 className="text-xl font-bold neon-text mb-2 tracking-tight">Scanner Visual</h3>
                   <p className="text-white/40 text-sm mb-8 px-8">Envie uma foto da sua refeição para análise instantânea da IA.</p>
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full py-4 bg-neon-green text-black font-bold rounded-xl flex items-center justify-center gap-2 neon-glow hover:scale-[1.02] active:scale-[0.98] transition-all"
-                  >
-                    <Camera size={20} />
-                    CAPTURAR / ENVIAR
+                  <button onClick={() => fileInputRef.current?.click()} className="w-full py-4 bg-neon-green text-black font-bold rounded-xl flex items-center justify-center gap-2 neon-glow hover:scale-[1.02] active:scale-[0.98] transition-all">
+                    <Camera size={20} /> CAPTURAR / ENVIAR
                   </button>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    ref={fileInputRef} 
-                    onChange={handleFileUpload} 
-                  />
+                  <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
                 </div>
               ) : (
                 <div className="space-y-6">
                   <div className="relative rounded-2xl overflow-hidden neon-border aspect-video bg-black/50">
                     <img src={previewUrl} className="w-full h-full object-cover" alt="Food preview" />
-                    <button 
-                      onClick={resetScanner}
-                      className="absolute top-3 right-3 p-2 bg-black/60 rounded-full text-white/80 hover:text-white"
-                    >
-                      <X size={18} />
-                    </button>
+                    <button onClick={() => { setPreviewUrl(null); setScannerResult(null); }} className="absolute top-3 right-3 p-2 bg-black/60 rounded-full text-white/80 hover:text-white"><X size={18} /></button>
                   </div>
-
-                  {isAnalyzing && (
-                    <div className="glass-card neon-border p-8 rounded-2xl flex flex-col items-center justify-center gap-4">
-                      <Loader2 className="text-neon-green animate-spin" size={32} />
-                      <p className="text-neon-green font-mono text-xs uppercase tracking-widest animate-pulse">Analisando Bio-dados...</p>
-                    </div>
-                  )}
-
+                  {isAnalyzing && <div className="glass-card neon-border p-8 rounded-2xl flex flex-col items-center justify-center gap-4"><Loader2 className="text-neon-green animate-spin" size={32} /><p className="text-neon-green font-mono text-xs uppercase tracking-widest animate-pulse">Analisando Bio-dados...</p></div>}
                   {scannerResult && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="space-y-4"
-                    >
-                      <div className="p-5 glass-card neon-border rounded-2xl">
-                        <h4 className="text-neon-green font-mono uppercase text-xs mb-1 tracking-widest">Identificado</h4>
-                        <p className="text-2xl font-bold uppercase">{scannerResult.name}</p>
-                      </div>
-
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                      <div className="p-5 glass-card neon-border rounded-2xl"><h4 className="text-neon-green font-mono uppercase text-xs mb-1 tracking-widest">Identificado</h4><p className="text-2xl font-bold uppercase">{scannerResult.name}</p></div>
                       <div className="grid grid-cols-2 gap-4">
                         <StatCard icon={<Zap size={14}/>} label="Calorias" value={scannerResult.calories} color="neon-green" />
                         <StatCard icon={<Dna size={14}/>} label="Proteína" value={scannerResult.protein} color="white" />
                         <StatCard icon={<Apple size={14}/>} label="Carbs" value={scannerResult.carbs} color="white" />
                         <StatCard icon={<Heart size={14}/>} label="Gordura" value={scannerResult.fat} color="white" />
                       </div>
-
-                      <div className="p-5 glass-card bg-neon-green/10 border-neon-green/20 rounded-2xl">
-                        <div className="flex items-center gap-2 mb-2 text-neon-green">
-                          <Activity size={16} />
-                          <span className="font-bold text-xs uppercase tracking-wider">Health Insights</span>
-                        </div>
-                        <p className="text-white/80 text-sm leading-relaxed italic">
-                          "{scannerResult.healthTip}"
-                        </p>
-                      </div>
-
-                      <button 
-                        onClick={resetScanner}
-                        className="w-full py-4 border border-white/10 text-white/50 hover:text-white hover:bg-white/5 transition-all rounded-xl font-mono text-xs uppercase tracking-widest"
-                      >
-                        Nova Análise
-                      </button>
+                      <div className="p-5 glass-card bg-neon-green/10 border-neon-green/20 rounded-2xl"><div className="flex items-center gap-2 mb-2 text-neon-green"><Activity size={16} /><span className="font-bold text-xs uppercase tracking-wider">Health Insights</span></div><p className="text-white/80 text-sm leading-relaxed italic">"{scannerResult.healthTip}"</p></div>
+                      <button onClick={() => { setPreviewUrl(null); setScannerResult(null); }} className="w-full py-4 border border-white/10 text-white/50 hover:text-white hover:bg-white/5 transition-all rounded-xl font-mono text-xs uppercase tracking-widest">Nova Análise</button>
                     </motion.div>
                   )}
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {activeTab === 'history' && (
+            <motion.div key="history" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex-1 p-6 flex flex-col overflow-y-auto">
+              <h2 className="text-2xl font-bold neon-text mb-6 font-mono uppercase tracking-tight">Histórico de Scans</h2>
+              <div className="space-y-4">
+                {scanHistory.map((item, idx) => (
+                  <div key={idx} className="glass-card neon-border p-4 rounded-2xl flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-neon-green/20 flex items-center justify-center text-neon-green font-bold text-xs">
+                      {item.calories}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-sm uppercase">{item.item_name}</p>
+                      <p className="text-[10px] text-white/40 font-mono italic">{new Date(item.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <ChevronRight size={16} className="text-white/20" />
+                  </div>
+                ))}
+                {scanHistory.length === 0 && <p className="text-center text-white/20 py-10">Nenhum scan registrado ainda.</p>}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -277,25 +445,20 @@ export default function App() {
       {activeTab === 'chat' && (
         <footer className="p-4 bg-dark-bg/80 backdrop-blur-xl border-t border-white/5 pb-8">
           <div className="flex gap-2 p-2 glass-card neon-border rounded-2xl items-center">
-            <input 
-              type="text" 
-              placeholder="Pergunte ao nutri..."
-              className="flex-1 bg-transparent border-none focus:outline-none px-3 text-sm placeholder:text-white/20"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-            />
-            <button 
-              onClick={handleSendMessage}
-              disabled={isTyping}
-              className="p-3 bg-neon-green text-black rounded-xl neon-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-            >
-              <Send size={18} />
-            </button>
+            <input type="text" placeholder="Pergunte ao nutri..." className="flex-1 bg-transparent border-none focus:outline-none px-3 text-sm placeholder:text-white/20" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} />
+            <button onClick={handleSendMessage} disabled={isTyping} className="p-3 bg-neon-green text-black rounded-xl neon-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-50"><Send size={18} /></button>
           </div>
         </footer>
       )}
     </div>
+  );
+}
+
+function TabButton({ active, icon, onClick }: { active: boolean, icon: any, onClick: () => void }) {
+  return (
+    <button onClick={onClick} className={`p-2 rounded-md transition-all ${active ? 'bg-neon-green text-black' : 'text-white/40 hover:text-white'}`}>
+      {icon}
+    </button>
   );
 }
 
@@ -310,4 +473,3 @@ function StatCard({ icon, label, value, color }: { icon: any, label: string, val
     </div>
   );
 }
-
