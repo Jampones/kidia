@@ -82,20 +82,23 @@ export default function App() {
               profile_type: pendingProfileData.profile_type,
               province: pendingProfileData.province,
               gender: pendingProfileData.gender,
-              age: parseInt(pendingProfileData.age),
+              age: parseInt(pendingProfileData.age) || 0,
               birth_date: pendingProfileData.birth_date,
-              notifications_enabled: pendingProfileData.notifications,
+              notifications_enabled: pendingProfileData.notifications ?? true,
               weight: parseFloat(pendingProfileData.weight) || null,
               height: parseFloat(pendingProfileData.height) || null,
               goal: pendingProfileData.goal,
               diet: pendingProfileData.diet,
               activity: pendingProfileData.activity,
-              restrictions: pendingProfileData.restrictions,
+              restrictions: pendingProfileData.restrictions || [],
               is_onboarded: true,
               total_scanned: 0,
               current_streak: 0
             });
-          if (profileError) console.error('Error saving profile:', profileError);
+          if (profileError) {
+            console.error('Erro ao salvar perfil:', profileError);
+            throw new Error(`Erro na base de dados ao salvar perfil: ${profileError.message}`);
+          }
         }
 
         alert('Cadastro realizado! Verifique seu e-mail para confirmar.');
