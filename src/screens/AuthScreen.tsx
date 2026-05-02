@@ -5,11 +5,12 @@ import { ChevronLeft, Loader2 } from 'lucide-react';
 interface AuthScreenProps {
   onBack: () => void;
   onAuth: (email: string, pass: string, isSignUp: boolean, fullName?: string) => Promise<void>;
+  onSwitchToSignUp?: () => void;
   error?: string;
   initialMode?: 'login' | 'signup';
 }
 
-export default function AuthScreen({ onBack, onAuth, error, initialMode = 'login' }: AuthScreenProps) {
+export default function AuthScreen({ onBack, onAuth, onSwitchToSignUp, error, initialMode = 'login' }: AuthScreenProps) {
   const [isSignUp, setIsSignUp] = useState(initialMode === 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -183,7 +184,13 @@ export default function AuthScreen({ onBack, onAuth, error, initialMode = 'login
         <p className="text-[13px] text-white/40 font-medium tracking-tight">
           {isSignUp ? 'Já tens conta? ' : 'Não tens conta? '}
           <button 
-            onClick={() => setIsSignUp(!isSignUp)}
+            onClick={() => {
+              if (!isSignUp && onSwitchToSignUp) {
+                onSwitchToSignUp();
+              } else {
+                setIsSignUp(!isSignUp);
+              }
+            }}
             className="text-[#4ADE80] font-black hover:opacity-80 transition-opacity"
           >
             {isSignUp ? 'Faz login' : 'Regista-te agora'}

@@ -64,6 +64,15 @@ export default function OnboardingFlow({ onComplete, onBack }: OnboardingFlowPro
     }
   };
 
+  const handleSkip = () => {
+    setProfileData(prev => ({
+      ...prev,
+      name: prev.name || 'Novo Utilizador',
+      age: prev.age || '25',
+    }));
+    setView('ready');
+  };
+
   // --- RENDERING VIEWS ---
 
   if (view === 'intro') {
@@ -93,6 +102,12 @@ export default function OnboardingFlow({ onComplete, onBack }: OnboardingFlowPro
               <ArrowRight size={20} strokeWidth={3} />
             </button>
           </div>
+          <button 
+            onClick={handleSkip} 
+            className="mt-6 text-white/20 text-[10px] font-black uppercase tracking-[0.2em] hover:text-[#4ADE80] transition-colors"
+          >
+            Pular Introdução
+          </button>
         </motion.div>
       </div>
     );
@@ -110,6 +125,7 @@ export default function OnboardingFlow({ onComplete, onBack }: OnboardingFlowPro
           <h2 className="text-[32px] font-black text-white leading-[1] mb-6">Comer bem com o que tens na mesa 🍽️</h2>
           <p className="text-white/40 text-[14px] leading-relaxed mb-10 font-medium">O NutriLens é o teu guia pessoal para comer melhor com os ingredientes locais, prevenindo a anemia e fortalecendo a tua saúde sem custos elevados.</p>
           <button onClick={() => setView('profile_select')} className="w-full py-5 bg-[#4ADE80] text-[#0A0B0D] font-black rounded-2xl flex items-center justify-center shadow-xl shadow-[#4ADE80]/10">Isso é para mim! ❤️</button>
+          <button onClick={handleSkip} className="mt-8 mx-auto text-white/20 text-[10px] font-black uppercase tracking-[0.2em] hover:text-[#4ADE80] transition-colors">Pular Quiz</button>
         </motion.div>
       </div>
     );
@@ -143,6 +159,7 @@ export default function OnboardingFlow({ onComplete, onBack }: OnboardingFlowPro
             ))}
           </div>
           <button onClick={() => setQuizStep(1) || setView('quiz')} className="w-full py-5 bg-[#4ADE80] text-[#0A0B0D] font-black rounded-2xl flex items-center justify-center shadow-xl shadow-[#4ADE80]/20">PRÓXIMO</button>
+          <button onClick={handleSkip} className="mt-8 mx-auto text-white/20 text-[10px] font-black uppercase tracking-[0.2em] hover:text-[#4ADE80] transition-colors">Pular Quiz</button>
         </motion.div>
       </div>
     );
@@ -161,6 +178,13 @@ export default function OnboardingFlow({ onComplete, onBack }: OnboardingFlowPro
           </div>
           <div className="w-10" />
         </div>
+
+        <button 
+          onClick={handleSkip} 
+          className="mb-4 text-white/20 text-[10px] font-black uppercase tracking-[0.2em] hover:text-[#4ADE80] transition-colors flex items-center justify-center gap-1"
+        >
+          Pular Quiz
+        </button>
 
         <AnimatePresence mode="wait">
           {quizStep === 1 && (

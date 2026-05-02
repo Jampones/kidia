@@ -174,8 +174,11 @@ export default function App() {
           )}
           {currentView === 'auth' && (
             <AuthScreen 
-              onBack={() => setCurrentView('onboarding')} 
+              onBack={() => setCurrentView('landing')} 
               onAuth={handleAuth}
+              onSwitchToSignUp={() => {
+                setCurrentView('onboarding');
+              }}
               error={authError}
               initialMode={authMode}
             />
