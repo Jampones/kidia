@@ -16,6 +16,8 @@ export default function AuthScreen({ onBack, onAuth, error, initialMode = 'login
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [termsType, setTermsType] = useState<'terms' | 'privacy'>('terms');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +26,52 @@ export default function AuthScreen({ onBack, onAuth, error, initialMode = 'login
     await onAuth(email, password, isSignUp, fullName);
     setLoading(false);
   };
+
+  if (showTerms) {
+    return (
+      <div className="flex-1 flex flex-col bg-[#0A0B0D] p-7 font-sans overflow-y-auto">
+        <button 
+          onClick={() => setShowTerms(false)} 
+          className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-white/80 mb-8"
+        >
+          <ChevronLeft size={20} />
+        </button>
+
+        <h2 className="text-[28px] font-black text-white tracking-tight mb-6">
+          {termsType === 'terms' ? 'Termos de Uso' : 'Política de Privacidade'}
+        </h2>
+
+        <div className="space-y-6 text-white/50 text-sm leading-relaxed pb-10">
+          <section>
+            <h3 className="text-[#4ADE80] font-bold uppercase text-[11px] mb-2 tracking-widest">Nossa Missão</h3>
+            <p>A Kidia Nutri é dedicada a melhorar a saúde dos angolanos através da tecnologia. Ao usares a nossa plataforma, assumes o compromisso de cuidar da tua saúde de forma consciente.</p>
+          </section>
+
+          <section>
+            <h3 className="text-[#4ADE80] font-bold uppercase text-[11px] mb-2 tracking-widest">Dados e Privacidade</h3>
+            <p>Utilizamos a inteligência artificial para analisar as tuas refeições. Os teus dados de perfil (idade, provincia e objectivos) são usados exclusivamente para personalizar as tuas recomendações nutricionais e nunca são partilhados com terceiros sem consentimento.</p>
+          </section>
+
+          <section>
+            <h3 className="text-[#4ADE80] font-bold uppercase text-[11px] mb-2 tracking-widest">Responsabilidade</h3>
+            <p>O NutriLens fornece orientações baseadas em dados científicos, mas não substitui a consulta com um nutricionista ou médico. Se tens condições de saúde graves, deves sempre seguir o conselho profissional.</p>
+          </section>
+
+          <section>
+            <h3 className="text-[#4ADE80] font-bold uppercase text-[11px] mb-2 tracking-widest">Uso da Imagem</h3>
+            <p>As fotos dos teus pratos são processadas pela nossa IA para extrair informações nutricionais. Guardamos o teu histórico de capturas para que possas acompanhar o teu progresso ao longo do tempo.</p>
+          </section>
+        </div>
+
+        <button 
+          onClick={() => setShowTerms(false)}
+          className="w-full py-4 bg-[#4ADE80] text-[#0A0B0D] font-black rounded-xl mb-6 shadow-xl shadow-[#4ADE80]/10"
+        >
+          ENTENDI, VOLTAR
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col bg-[#0A0B0D] p-7 font-sans">
@@ -103,7 +151,7 @@ export default function AuthScreen({ onBack, onAuth, error, initialMode = 'login
               className="mt-1 w-5 h-5 rounded-[4px] border-white/10 bg-[#121417] accent-[#4ADE80] focus:ring-0"
             />
             <p className="text-[11px] text-white/30 leading-relaxed font-medium">
-              Ao criar uma conta, aceito os <span className="text-[#4ADE80] font-bold">Termos de Uso</span> e a <span className="text-[#4ADE80] font-bold">Política de Privacidade</span> do Kidia Nutri.
+              Ao criar uma conta, aceito os <button type="button" onClick={() => { setTermsType('terms'); setShowTerms(true); }} className="text-[#4ADE80] font-bold hover:underline">Termos de Uso</button> e a <button type="button" onClick={() => { setTermsType('privacy'); setShowTerms(true); }} className="text-[#4ADE80] font-bold hover:underline">Política de Privacidade</button> do Kidia Nutri.
             </p>
           </div>
         )}
