@@ -83,6 +83,8 @@ export default function App() {
               province: pendingProfileData.province,
               gender: pendingProfileData.gender,
               age: parseInt(pendingProfileData.age),
+              weight: parseFloat(pendingProfileData.weight) || null,
+              height: parseFloat(pendingProfileData.height) || null,
               goal: pendingProfileData.goal,
               diet: pendingProfileData.diet,
               activity: pendingProfileData.activity,

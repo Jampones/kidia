@@ -18,15 +18,42 @@ export default function OnboardingFlow({ onComplete, onBack }: OnboardingFlowPro
   const [profileData, setProfileData] = useState({
     profile_type: 'self',
     name: '',
-    age: '',
+    birth_date: '',
+    age: 0,
     gender: 'Masculino',
     province: 'Luanda',
+    weight: '',
+    height: '',
     goal: 'eat_better',
     diet: 'omnivore',
     activity: 'moderate',
     restrictions: [] as string[],
     notifications: true
   });
+
+  const calculateAge = (birthDate: string) => {
+    if (!birthDate) return 0;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const PROVINCES = [
+    "Bengo", "Benguela", "Bié", "Cabinda", "Cuando Cubango", 
+    "Cuanza Norte", "Cuanza Sul", "Cunene", "Huambo", "Huíla", 
+    "Luanda", "Lunda Norte", "Lunda Sul", "Malanje", "Moxico", 
+    "Namibe", "Uíge", "Zaire"
+  ];
+
+  const handleBirthDateChange = (date: string) => {
+    const age = calculateAge(date);
+    setProfileData(prev => ({ ...prev, birth_date: date, age }));
+  };
 
   const [quizStep, setQuizStep] = useState(1);
   const totalQuizSteps = 6;
@@ -188,42 +215,55 @@ export default function OnboardingFlow({ onComplete, onBack }: OnboardingFlowPro
 
         <AnimatePresence mode="wait">
           {quizStep === 1 && (
-            <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col">
-              <div className="mb-8"><div className="w-12 h-12 bg-[#4ADE80]/10 rounded-2xl flex items-center justify-center border border-[#4ADE80]/20"><MapPin className="text-[#4ADE80]" size={24} /></div></div>
-              <h2 className="text-3xl font-black text-white leading-tight mb-8">Quem estamos a cuidar?</h2>
-              <div className="space-y-6">
+            <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col overflow-y-auto pb-6">
+              <div className="mb-6"><div className="w-12 h-12 bg-[#4ADE80]/10 rounded-2xl flex items-center justify-center border border-[#4ADE80]/20"><MapPin className="text-[#4ADE80]" size={24} /></div></div>
+              <h2 className="text-2xl font-black text-white leading-tight mb-6">Quem estamos a cuidar?</h2>
+              <div className="space-y-5">
                 <div>
                   <label className="text-[10px] uppercase font-black text-[#4ADE80] ml-1 mb-2 block tracking-[0.2em]">Nome Completo</label>
-                  <input type="text" className="w-full bg-[#121417] border border-white/5 rounded-2xl px-6 py-5 text-sm font-medium focus:outline-none focus:border-[#4ADE80]/40 text-white" placeholder="Ex: Alexandra Kavesse" value={profileData.name} onChange={e => setProfileData(prev => ({...prev, name: e.target.value}))} />
+                  <input type="text" className="w-full bg-[#121417] border border-white/5 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-[#4ADE80]/40 text-white" placeholder="Ex: Alexandra Kavesse" value={profileData.name} onChange={e => setProfileData(prev => ({...prev, name: e.target.value}))} />
                 </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] uppercase font-black text-[#4ADE80] ml-1 mb-2 block tracking-[0.2em]">Idade {profileData.profile_type === 'child' ? '(meses/anos)' : ''}</label>
-                    <input type="number" className="w-full bg-[#121417] border border-white/5 rounded-2xl px-6 py-5 text-sm font-medium focus:outline-none focus:border-[#4ADE80]/40 text-white" placeholder="25" value={profileData.age} onChange={e => setProfileData(prev => ({...prev, age: e.target.value}))} />
+                    <label className="text-[10px] uppercase font-black text-[#4ADE80] ml-1 mb-2 block tracking-[0.2em]">Data de Nascimento</label>
+                    <input type="date" max={new Date().toISOString().split('T')[0]} className="w-full bg-[#121417] border border-white/5 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-[#4ADE80]/40 text-white" value={profileData.birth_date} onChange={e => handleBirthDateChange(e.target.value)} />
                   </div>
                   <div>
                     <label className="text-[10px] uppercase font-black text-[#4ADE80] ml-1 mb-2 block tracking-[0.2em]">Província</label>
-                    <select className="w-full bg-[#121417] border border-white/5 rounded-2xl px-6 py-5 text-sm font-medium focus:outline-none focus:border-[#4ADE80]/40 text-white appearance-none" value={profileData.province} onChange={e => setProfileData(prev => ({...prev, province: e.target.value}))}>
-                      <option value="Luanda">Luanda</option>
-                      <option value="Benguela">Benguela</option>
-                      <option value="Huíla">Huíla</option>
-                      <option value="Cabinda">Cabinda</option>
-                      <option value="Huambo">Huambo</option>
-                      <option value="Zaire">Zaire</option>
-                      <option value="Outra">Outra</option>
+                    <select className="w-full bg-[#121417] border border-white/5 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-[#4ADE80]/40 text-white appearance-none" value={profileData.province} onChange={e => setProfileData(prev => ({...prev, province: e.target.value}))}>
+                      {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] uppercase font-black text-[#4ADE80] ml-1 mb-2 block tracking-[0.2em]">Peso (kg)</label>
+                    <input type="number" step="0.1" className="w-full bg-[#121417] border border-white/5 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-[#4ADE80]/40 text-white" placeholder="70" value={profileData.weight} onChange={e => setProfileData(prev => ({...prev, weight: e.target.value}))} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-black text-[#4ADE80] ml-1 mb-2 block tracking-[0.2em]">Altura (cm)</label>
+                    <input type="number" className="w-full bg-[#121417] border border-white/5 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:border-[#4ADE80]/40 text-white" placeholder="170" value={profileData.height} onChange={e => setProfileData(prev => ({...prev, height: e.target.value}))} />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="text-[10px] uppercase font-black text-[#4ADE80] ml-1 mb-4 block tracking-[0.2em]">Sexo</label>
+                  <label className="text-[10px] uppercase font-black text-[#4ADE80] ml-1 mb-3 block tracking-[0.2em]">Sexo</label>
                   <div className="flex gap-4">
                     {['Masculino', 'Feminino'].map(s => (
-                      <button key={s} onClick={() => setProfileData(prev => ({...prev, gender: s}))} className={`flex-1 py-4 rounded-xl border font-bold text-xs uppercase tracking-widest transition-all ${profileData.gender === s ? 'border-[#4ADE80] bg-[#4ADE80]/10 text-[#4ADE80]' : 'border-white/5 bg-white/5 text-white/30'}`}>{s}</button>
+                      <button key={s} onClick={() => setProfileData(prev => ({...prev, gender: s}))} className={`flex-1 py-3.5 rounded-xl border font-bold text-xs uppercase tracking-widest transition-all ${profileData.gender === s ? 'border-[#4ADE80] bg-[#4ADE80]/10 text-[#4ADE80]' : 'border-white/5 bg-white/5 text-white/30'}`}>{s}</button>
                     ))}
                   </div>
                 </div>
               </div>
-              <button disabled={!profileData.name || !profileData.age} onClick={() => setQuizStep(2)} className="w-full py-5 bg-[#4ADE80] text-black font-black rounded-2xl mt-auto disabled:opacity-30">CONTINUAR</button>
+              <button 
+                disabled={!profileData.name || !profileData.birth_date || profileData.age > 100 || profileData.age < 0} 
+                onClick={() => setQuizStep(2)} 
+                className="w-full py-5 bg-[#4ADE80] text-black font-black rounded-2xl mt-8 disabled:opacity-30"
+              >
+                {profileData.age > 100 ? 'IDADE INVÁLIDA (>100)' : 'CONTINUAR'}
+              </button>
             </motion.div>
           )}
 
@@ -233,14 +273,17 @@ export default function OnboardingFlow({ onComplete, onBack }: OnboardingFlowPro
               <h2 className="text-3xl font-black text-white leading-tight mb-8">Qual é o teu principal objectivo?</h2>
               <div className="space-y-3">
                 {[
-                  { id: 'weight_loss', title: 'Perder peso', desc: 'Reduzir a gordura corporal' },
-                  { id: 'gain_muscle', title: 'Ganhar massa', desc: 'Aumentar a musculatura' },
-                  { id: 'maintain', title: 'Manter a forma', desc: 'Manter o peso actual' },
-                  { id: 'eat_better', title: 'Comer melhor', desc: 'Melhorar a qualidade de vida' },
-                  { id: 'health', title: 'Controlar saúde', desc: 'Condição de saúde específica' }
+                  { id: 'weight_loss', title: 'Perder peso', desc: 'Reduzir a gordura corporal', icon: '📉' },
+                  { id: 'gain_muscle', title: 'Ganhar massa', desc: 'Aumentar a musculatura', icon: '💪' },
+                  { id: 'maintain', title: 'Manter a forma', desc: 'Manter o peso actual', icon: '⚖️' },
+                  { id: 'eat_better', title: 'Comer melhor', desc: 'Melhorar a qualidade de vida', icon: '🥗' },
+                  { id: 'health', title: 'Controlar saúde', desc: 'Condição de saúde específica', icon: '❤️' }
                 ].map(opt => (
                   <button key={opt.id} onClick={() => { setProfileData(prev => ({...prev, goal: opt.id})); setQuizStep(3); }} className={`w-full p-5 rounded-2xl border text-left flex items-center justify-between transition-all ${profileData.goal === opt.id ? 'border-[#4ADE80] bg-[#4ADE80]/5' : 'border-white/5 bg-[#121417]/50'}`}>
-                    <div><h4 className={`font-bold text-sm ${profileData.goal === opt.id ? 'text-[#4ADE80]' : 'text-white'}`}>{opt.title}</h4><p className="text-[10px] text-white/30 uppercase tracking-tight mt-0.5">{opt.desc}</p></div>
+                    <div className="flex items-center gap-4">
+                      <span className={`text-2xl grayscale transition-all ${profileData.goal === opt.id ? 'grayscale-0' : 'opacity-40'}`}>{opt.icon}</span>
+                      <div><h4 className={`font-bold text-sm ${profileData.goal === opt.id ? 'text-[#4ADE80]' : 'text-white'}`}>{opt.title}</h4><p className="text-[10px] text-white/30 uppercase tracking-tight mt-0.5">{opt.desc}</p></div>
+                    </div>
                     {profileData.goal === opt.id && <div className="w-5 h-5 bg-[#4ADE80] rounded-full flex items-center justify-center text-black shadow-lg"><Check size={12} strokeWidth={4} /></div>}
                   </button>
                 ))}
@@ -253,14 +296,17 @@ export default function OnboardingFlow({ onComplete, onBack }: OnboardingFlowPro
               <h2 className="text-3xl font-black text-white leading-tight mb-8">Como preferes alimentar-te?</h2>
               <div className="space-y-3">
                 {[
-                  { id: 'omnivore', title: 'Como de tudo', desc: 'Sem restrições' },
-                  { id: 'vegetarian', title: 'Vegetariano', desc: 'Sem carne, mas como ovos' },
-                  { id: 'vegan', title: 'Vegano', desc: 'Nenhum produto animal' },
-                  { id: 'low_carb', title: 'Baixo carboidrato', desc: 'Mais proteína e gordura' },
-                  { id: 'balanced', title: 'Equilibrado', desc: 'Foco em alimentos naturais' }
+                  { id: 'omnivore', title: 'Como de tudo', desc: 'Sem restrições', icon: '🍽️' },
+                  { id: 'vegetarian', title: 'Vegetariano', desc: 'Sem carne, mas como ovos', icon: '🥦' },
+                  { id: 'vegan', title: 'Vegano', desc: 'Nenhum produto animal', icon: '🌱' },
+                  { id: 'low_carb', title: 'Baixo carboidrato', desc: 'Mais proteína e gordura', icon: '🥩' },
+                  { id: 'balanced', title: 'Equilibrado', desc: 'Foco em alimentos naturais', icon: '🍎' }
                 ].map(opt => (
                   <button key={opt.id} onClick={() => { setProfileData(prev => ({...prev, diet: opt.id})); setQuizStep(4); }} className={`w-full p-5 rounded-2xl border text-left flex items-center justify-between transition-all ${profileData.diet === opt.id ? 'border-[#4ADE80] bg-[#4ADE80]/5' : 'border-white/5 bg-[#121417]/50'}`}>
-                    <div><h4 className={`font-bold text-sm ${profileData.diet === opt.id ? 'text-[#4ADE80]' : 'text-white'}`}>{opt.title}</h4><p className="text-[10px] text-white/30 uppercase tracking-tight mt-0.5">{opt.desc}</p></div>
+                    <div className="flex items-center gap-4">
+                      <span className={`text-2xl grayscale transition-all ${profileData.diet === opt.id ? 'grayscale-0' : 'opacity-40'}`}>{opt.icon}</span>
+                      <div><h4 className={`font-bold text-sm ${profileData.diet === opt.id ? 'text-[#4ADE80]' : 'text-white'}`}>{opt.title}</h4><p className="text-[10px] text-white/30 uppercase tracking-tight mt-0.5">{opt.desc}</p></div>
+                    </div>
                     {profileData.diet === opt.id && <div className="w-5 h-5 bg-[#4ADE80] rounded-full flex items-center justify-center text-black shadow-lg"><Check size={12} strokeWidth={4} /></div>}
                   </button>
                 ))}
@@ -273,13 +319,16 @@ export default function OnboardingFlow({ onComplete, onBack }: OnboardingFlowPro
               <h2 className="text-3xl font-black text-white leading-tight mb-8">Qual é o teu nível de actividade?</h2>
               <div className="space-y-3">
                 {[
-                  { id: 'sedentary', title: 'Sedentário', desc: 'Pouco ou nenhum exercício' },
-                  { id: 'light', title: 'Leve', desc: 'Caminhadas 1-3x por semana' },
-                  { id: 'moderate', title: 'Moderado', desc: 'Exercício 3-5x por semana' },
-                  { id: 'active', title: 'Activo', desc: 'Exercício intenso quase diário' }
+                  { id: 'sedentary', title: 'Sedentário', desc: 'Pouco ou nenhum exercício', icon: '🪑' },
+                  { id: 'light', title: 'Leve', desc: 'Caminhadas 1-3x por semana', icon: '🚶' },
+                  { id: 'moderate', title: 'Moderado', desc: 'Exercício 3-5x por semana', icon: '🚴' },
+                  { id: 'active', title: 'Activo', desc: 'Exercício intenso quase diário', icon: '🏃' }
                 ].map(opt => (
                   <button key={opt.id} onClick={() => { setProfileData(prev => ({...prev, activity: opt.id})); setQuizStep(5); }} className={`w-full p-5 rounded-2xl border text-left flex items-center justify-between transition-all ${profileData.activity === opt.id ? 'border-[#4ADE80] bg-[#4ADE80]/5' : 'border-white/5 bg-[#121417]/50'}`}>
-                    <div><h4 className={`font-bold text-sm ${profileData.activity === opt.id ? 'text-[#4ADE80]' : 'text-white'}`}>{opt.title}</h4><p className="text-[10px] text-white/30 uppercase tracking-tight mt-0.5">{opt.desc}</p></div>
+                    <div className="flex items-center gap-4">
+                      <span className={`text-2xl grayscale transition-all ${profileData.activity === opt.id ? 'grayscale-0' : 'opacity-40'}`}>{opt.icon}</span>
+                      <div><h4 className={`font-bold text-sm ${profileData.activity === opt.id ? 'text-[#4ADE80]' : 'text-white'}`}>{opt.title}</h4><p className="text-[10px] text-white/30 uppercase tracking-tight mt-0.5">{opt.desc}</p></div>
+                    </div>
                     {profileData.activity === opt.id && <div className="w-5 h-5 bg-[#4ADE80] rounded-full flex items-center justify-center text-black shadow-lg"><Check size={12} strokeWidth={4} /></div>}
                   </button>
                 ))}
@@ -338,7 +387,7 @@ export default function OnboardingFlow({ onComplete, onBack }: OnboardingFlowPro
         
         <div className="w-full bg-[#121417]/50 border border-white/5 rounded-3xl p-6 mb-10 space-y-4 text-left">
           <div className="flex items-center gap-3"><User size={16} className="text-[#4ADE80]" /><span className="text-white/40 text-xs font-bold uppercase tracking-tight">Utilizador:</span><span className="text-white font-bold ml-auto">{profileData.name}</span></div>
-          <div className="flex items-center gap-3"><Zap size={16} className="text-[#4ADE80]" /><span className="text-white/40 text-xs font-bold uppercase tracking-tight">Objectivo:</span><span className="text-white font-bold ml-auto">{profileData.goal.replace('_', ' ')}</span></div>
+          <div className="flex items-center gap-3"><Zap size={16} className="text-[#4ADE80]" /><span className="text-white/40 text-xs font-bold uppercase tracking-tight">IMC Info:</span><span className="text-white font-bold ml-auto">{profileData.weight}kg • {profileData.height}cm</span></div>
           <div className="flex items-center gap-3"><Heart size={16} className="text-[#4ADE80]" /><span className="text-white/40 text-xs font-bold uppercase tracking-tight">Perfil:</span><span className="text-white font-bold ml-auto uppercase">{profileData.profile_type}</span></div>
         </div>
 
