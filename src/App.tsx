@@ -7,12 +7,13 @@ import { Loader2, Zap } from 'lucide-react';
 import LandingScreen from './screens/LandingScreen.tsx';
 import AuthScreen from './screens/AuthScreen.tsx';
 import Dashboard from './screens/Dashboard.tsx';
+import OnboardingFlow from './screens/onboarding/OnboardingFlow.tsx';
 
 export default function App() {
   const [session, setSession] = useState<SupabaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [configMissing, setConfigMissing] = useState(false);
-  const [currentView, setCurrentView] = useState<'landing' | 'auth'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'auth' | 'onboarding'>('landing');
   const [authError, setAuthError] = useState('');
 
   const getClient = () => {
@@ -104,12 +105,22 @@ export default function App() {
         <Dashboard session={session} onLogout={logout} />
       ) : (
         <>
-          {currentView === 'landing' ? (
+          {currentView === 'landing' && (
             <LandingScreen 
-              onStart={() => setCurrentView('auth')} 
+              onStart={() => setCurrentView('onboarding')} 
               onLogin={() => setCurrentView('auth')} 
             />
-          ) : (
+          )}
+          {currentView === 'onboarding' && (
+            <OnboardingFlow 
+              onComplete={(data) => {
+                console.log('Onboarding data:', data);
+                setCurrentView('auth');
+              }}
+              onBack={() => setCurrentView('landing')}
+            />
+          )}
+          {currentView === 'auth' && (
             <AuthScreen 
               onBack={() => setCurrentView('landing')} 
               onAuth={handleAuth}
