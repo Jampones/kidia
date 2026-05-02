@@ -1,39 +1,35 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  --color-neon-green: #39FF14;
-  --color-dark-bg: #050505;
-  --color-card-bg: #0D0D0D;
+  --color-primary: #4ADE80; /* Brighter green from prototype button */
+  --color-dark-bg: #0A0A0A; /* Deeper black */
+  --color-card-bg: #121212;
 }
 
 @layer base {
   body {
     @apply bg-dark-bg text-white font-sans antialiased;
-    background-image: 
-      radial-gradient(circle at 50% -20%, rgba(57, 255, 20, 0.15) 0%, transparent 50%),
-      radial-gradient(circle at -10% 100%, rgba(57, 255, 20, 0.05) 0%, transparent 40%);
-    background-attachment: fixed;
   }
 }
 
 @layer utilities {
-  .neon-border {
-    @apply border border-neon-green/30 shadow-[0_0_15px_-3px_rgba(57,255,20,0.3)];
+  .btn-primary {
+    @apply w-full py-4 bg-[#4ADE80] text-black font-bold rounded-2xl flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-[#4ADE80]/20;
   }
   
-  .neon-text {
-    @apply text-neon-green drop-shadow-[0_0_8px_rgba(57,255,20,0.5)];
+  .btn-outline {
+    @apply w-full py-4 border border-white/10 text-white/60 font-medium rounded-2xl flex items-center justify-center gap-2 transition-all hover:bg-white/5 hover:text-white;
   }
 
-  .neon-glow {
-    @apply shadow-[0_0_20px_rgba(57,255,20,0.4)];
+  .glass-header {
+    @apply bg-[#0A0A0A]/80 backdrop-blur-md border-b border-white/5;
   }
 
-  .glass-card {
-    @apply bg-card-bg/80 backdrop-blur-md border border-white/5;
+  .badge-primary {
+    @apply px-4 py-1.5 border border-primary/40 rounded-full text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/5;
   }
 }
 
