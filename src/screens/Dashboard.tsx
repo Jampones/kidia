@@ -39,14 +39,28 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
   const [scannerResult, setScannerResult] = useState<AnalysisResult | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [scanHistory, setScanHistory] = useState<any[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
-  useEffect(() => { loadChatHistory(); loadScanHistory(); }, []);
+  useEffect(() => { 
+    loadChatHistory(); 
+    loadScanHistory(); 
+    loadUserProfile();
+  }, []);
 
   const getClient = () => getSupabase();
+
+  const loadUserProfile = async () => {
+    const { data } = await getClient()
+      .from('profiles')
+      .select('*')
+      .eq('id', session.id)
+      .single();
+    if (data) setUserProfile(data);
+  };
 
   const loadChatHistory = async () => {
     const { data } = await getClient().from('chat_messages').select('*').eq('user_id', session.id).order('created_at', { ascending: true });
@@ -63,7 +77,7 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
     const userMsg = input; setInput(''); setMessages(prev => [...prev, { role: 'user', text: userMsg }]); setIsTyping(true);
     await getClient().from('chat_messages').insert({ user_id: session.id, text: userMsg, sender: 'user' });
     try {
-      const response = await askNutritionAssistant(userMsg, messages.map(m => ({ role: m.role, parts: [{ text: m.text }] })));
+      const response = await askNutritionAssistant(userMsg, messages.map(m => ({ role: m.role, parts: [{ text: m.text }] })), userProfile);
       const aiMsg = response || 'Erro no sistema';
       setMessages(prev => [...prev, { role: 'model', text: aiMsg }]);
       await getClient().from('chat_messages').insert({ user_id: session.id, text: aiMsg, sender: 'specialist' });
@@ -83,7 +97,7 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
   const processImage = async (base64: string) => {
     setIsAnalyzing(true); setScannerResult(null);
     try {
-      const result = await analyzeFoodImage(base64);
+      const result = await analyzeFoodImage(base64, userProfile);
       setScannerResult(result);
       await getClient().from('scan_history').insert({
         user_id: session.id, date: new Date().toISOString().split('T')[0], item_name: result.name,

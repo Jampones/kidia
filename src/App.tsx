@@ -15,6 +15,8 @@ export default function App() {
   const [configMissing, setConfigMissing] = useState(false);
   const [currentView, setCurrentView] = useState<'landing' | 'auth' | 'onboarding'>('landing');
   const [authError, setAuthError] = useState('');
+  const [pendingProfileData, setPendingProfileData] = useState<any>(null);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
   const getClient = () => {
     try {
@@ -46,16 +48,46 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleAuth = async (email: string, pass: string, isSignUp: boolean) => {
+  const handleAuth = async (email: string, pass: string, isSignUp: boolean, fullName?: string) => {
     setAuthError('');
     const supabase = getClient();
     if (!supabase) return;
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({ email, password: pass });
+        const { data: signUpData, error } = await supabase.auth.signUp({ 
+          email, 
+          password: pass,
+          options: {
+            data: {
+              full_name: fullName
+            }
+          }
+        });
         if (error) throw error;
-        alert('Cadastro realizado! Verifique seu email para confirmar.');
+        
+        // Save profile data if we have it
+        if (signUpData.user && pendingProfileData) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: signUpData.user.id,
+              name: fullName || pendingProfileData.name,
+              email: email,
+              profile_type: pendingProfileData.profile_type,
+              age: parseInt(pendingProfileData.age),
+              goal: pendingProfileData.goal,
+              diet: pendingProfileData.diet,
+              activity: pendingProfileData.activity,
+              restrictions: pendingProfileData.restrictions,
+              is_onboarded: true,
+              total_scanned: 0,
+              current_streak: 0
+            });
+          if (profileError) console.error('Error saving profile:', profileError);
+        }
+
+        alert('Cadastro realizado! Verifique seu e-mail para confirmar.');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
         if (error) throw error;
@@ -100,7 +132,7 @@ export default function App() {
 
   // Router Logic
   return (
-    <div className="min-h-screen flex flex-col max-w-lg mx-auto border-x border-white/5 bg-dark-bg shadow-2xl relative">
+    <div className="min-h-screen flex flex-col max-w-lg mx-auto border-x border-white/5 bg-[#0A0B0D] shadow-2xl relative font-sans">
       {session ? (
         <Dashboard session={session} onLogout={logout} />
       ) : (
@@ -108,13 +140,18 @@ export default function App() {
           {currentView === 'landing' && (
             <LandingScreen 
               onStart={() => setCurrentView('onboarding')} 
-              onLogin={() => setCurrentView('auth')} 
+              onLogin={() => {
+                setAuthError('');
+                setCurrentView('auth');
+              }} 
             />
           )}
           {currentView === 'onboarding' && (
             <OnboardingFlow 
-              onComplete={(data) => {
-                console.log('Onboarding data:', data);
+              onComplete={(mode, profileData) => {
+                setAuthError('');
+                setPendingProfileData(profileData);
+                setAuthMode('signup');
                 setCurrentView('auth');
               }}
               onBack={() => setCurrentView('landing')}
@@ -122,9 +159,10 @@ export default function App() {
           )}
           {currentView === 'auth' && (
             <AuthScreen 
-              onBack={() => setCurrentView('landing')} 
+              onBack={() => setCurrentView('onboarding')} 
               onAuth={handleAuth}
               error={authError}
+              initialMode={authMode}
             />
           )}
         </>

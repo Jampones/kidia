@@ -1,90 +1,146 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { ChevronLeft, Loader2, Zap } from 'lucide-react';
+import { ChevronLeft, Loader2 } from 'lucide-react';
 
 interface AuthScreenProps {
   onBack: () => void;
-  onAuth: (email: string, pass: string, isSignUp: boolean) => Promise<void>;
+  onAuth: (email: string, pass: string, isSignUp: boolean, fullName?: string) => Promise<void>;
   error?: string;
+  initialMode?: 'login' | 'signup';
 }
 
-export default function AuthScreen({ onBack, onAuth, error }: AuthScreenProps) {
-  const [isSignUp, setIsSignUp] = useState(false);
+export default function AuthScreen({ onBack, onAuth, error, initialMode = 'login' }: AuthScreenProps) {
+  const [isSignUp, setIsSignUp] = useState(initialMode === 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSignUp && !acceptedTerms) return;
     setLoading(true);
-    await onAuth(email, password, isSignUp);
+    await onAuth(email, password, isSignUp, fullName);
     setLoading(false);
   };
 
   return (
-    <div className="flex-1 flex flex-col p-8 bg-dark-bg">
-      <button onClick={onBack} className="p-2 -ml-2 text-white/40 hover:text-white transition-colors w-fit">
-        <ChevronLeft size={24} />
-      </button>
+    <div className="flex-1 flex flex-col bg-[#0A0B0D] p-7 font-sans">
+      {/* Circle Back Button */}
+      <div className="flex justify-start mb-10 pt-2">
+        <button 
+          onClick={onBack} 
+          className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-white/80 hover:text-white transition-all transform active:scale-90"
+        >
+          <ChevronLeft size={20} />
+        </button>
+      </div>
 
-      <div className="mt-12 mb-10">
-        <div className="w-14 h-14 bg-[#4ADE80] rounded-2xl flex items-center justify-center mb-8 shadow-2xl shadow-[#4ADE80]/20">
-          <Zap size={28} className="text-[#0A0B0D]" />
-        </div>
-        <h2 className="text-4xl font-black mb-3 tracking-tight text-white">
-          {isSignUp ? 'Criar conta' : 'Aceder'}
+      <div className="mb-10">
+        <h2 className="text-[34px] font-black text-white tracking-tight mb-2 leading-tight">
+          {isSignUp ? 'Cria a tua conta' : 'Bem-vindo de volta!'}
         </h2>
-        <p className="text-white/40 text-sm font-medium">
-          {isSignUp ? 'Começa a tua jornada hoje.' : 'Bem-vindo de volta à tua nutrição.'}
+        <p className="text-white/40 text-[15px] font-medium leading-normal max-w-[280px]">
+          {isSignUp 
+            ? 'Começa hoje a tua jornada para uma vida mais saudável.' 
+            : 'Faz login para continuar a cuidar da tua saúde.'}
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {isSignUp && (
+          <div>
+            <label className="text-[11px] font-black text-white/50 ml-1 mb-2 block uppercase tracking-tight">Nome completo</label>
+            <input 
+              type="text" 
+              required
+              className="w-full bg-[#121417] border border-white/[0.03] rounded-[20px] px-6 py-5 text-sm font-medium focus:border-[#4ADE80]/40 focus:outline-none transition-all placeholder:text-white/10 text-white shadow-inner"
+              placeholder="O teu nome"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+            />
+          </div>
+        )}
+
         <div>
-          <label className="text-[10px] uppercase font-black text-[#4ADE80] ml-1 mb-2.5 block tracking-[0.2em]">Email</label>
+          <label className="text-[11px] font-black text-white/50 ml-1 mb-2 block uppercase tracking-tight">E-mail</label>
           <input 
             type="email" 
             required
-            className="w-full bg-[#121417] border border-white/5 rounded-2xl px-6 py-4.5 text-sm focus:border-[#4ADE80]/50 focus:outline-none transition-all placeholder:text-white/10"
-            placeholder="seu@email.com"
+            className="w-full bg-[#121417] border border-white/[0.03] rounded-[20px] px-6 py-5 text-sm font-medium focus:border-[#4ADE80]/40 focus:outline-none transition-all placeholder:text-white/10 text-white shadow-inner"
+            placeholder="kavessealexandra@gmail"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
-        <div>
-          <label className="text-[10px] uppercase font-black text-[#4ADE80] ml-1 mb-2.5 block tracking-[0.2em]">Senha</label>
+
+        <div className="relative">
+          <label className="text-[11px] font-black text-white/50 ml-1 mb-2 block uppercase tracking-tight">Palavra-passe</label>
           <input 
             type="password" 
             required
-            className="w-full bg-[#121417] border border-white/5 rounded-2xl px-6 py-4.5 text-sm focus:border-[#4ADE80]/50 focus:outline-none transition-all placeholder:text-white/10"
-            placeholder="••••••••"
+            className="w-full bg-[#121417] border border-white/[0.03] rounded-[20px] px-6 py-5 text-sm font-medium focus:border-[#4ADE80]/40 focus:outline-none transition-all placeholder:text-white/10 text-white shadow-inner outline-none"
+            placeholder="••••••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          {!isSignUp && (
+            <div className="flex justify-end mt-2">
+              <button type="button" className="text-[11px] font-bold text-[#4ADE80] hover:opacity-80 transition-opacity">
+                Esqueci-me da senha
+              </button>
+            </div>
+          )}
         </div>
 
-        {error && (
-          <p className="text-red-400 text-[11px] font-bold text-center bg-red-400/5 py-4 rounded-2xl border border-red-400/10">
-            {error}
-          </p>
+        {isSignUp && (
+          <div className="flex items-start gap-3 pt-2">
+            <input 
+              type="checkbox" 
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-1 w-5 h-5 rounded-[4px] border-white/10 bg-[#121417] accent-[#4ADE80] focus:ring-0"
+            />
+            <p className="text-[11px] text-white/30 leading-relaxed font-medium">
+              Ao criar uma conta, aceito os <span className="text-[#4ADE80] font-bold">Termos de Uso</span> e a <span className="text-[#4ADE80] font-bold">Política de Privacidade</span> do Kidia Nutri.
+            </p>
+          </div>
         )}
 
-        <button 
-          type="submit"
-          disabled={loading}
-          className="w-full py-5 bg-[#4ADE80] text-[#0A0B0D] font-black rounded-2xl mt-4 disabled:opacity-50 transition-transform active:scale-[0.97]"
-        >
-          {loading ? <Loader2 className="animate-spin mx-auto" /> : (isSignUp ? 'CADASTRAR' : 'ENTRAR AGORA')}
-        </button>
+        {error && (
+          <div className="py-4 px-6 bg-red-500/10 border border-red-500/20 rounded-2xl">
+            <p className="text-red-400 text-xs font-bold text-center">
+              {error}
+            </p>
+          </div>
+        )}
+
+        <div className="pt-4">
+          <button 
+            type="submit"
+            disabled={loading || (isSignUp && !acceptedTerms)}
+            className={`w-full py-5 rounded-[28px] font-black tracking-tight text-lg transition-all active:scale-[0.97] flex items-center justify-center ${
+              (loading || (isSignUp && !acceptedTerms)) 
+                ? 'bg-[#1A1C20] text-white/20 cursor-not-allowed border border-white/[0.02]' 
+                : 'bg-[#00CC66] text-white shadow-xl shadow-[#00CC66]/20 hover:shadow-[#00CC66]/30'
+            }`}
+          >
+            {loading ? <Loader2 className="animate-spin" /> : (isSignUp ? 'Registar conta' : 'Entrar')}
+          </button>
+        </div>
       </form>
 
-      <div className="mt-auto pt-8 text-center">
-        <button 
-          onClick={() => setIsSignUp(!isSignUp)}
-          className="text-xs text-white/40 uppercase font-bold tracking-widest hover:text-primary transition-colors"
-        >
-          {isSignUp ? 'Já tem conta? Entrar' : 'Não tem conta? Cadastrar'}
-        </button>
+      <div className="mt-auto pt-8 text-center pb-6">
+        <p className="text-[13px] text-white/40 font-medium tracking-tight">
+          {isSignUp ? 'Já tens conta? ' : 'Não tens conta? '}
+          <button 
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="text-[#4ADE80] font-black hover:opacity-80 transition-opacity"
+          >
+            {isSignUp ? 'Faz login' : 'Regista-te agora'}
+          </button>
+        </p>
       </div>
     </div>
   );
