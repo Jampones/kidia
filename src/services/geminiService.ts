@@ -1,6 +1,33 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const getRotatingKey = () => {
+  const keys = [
+    import.meta.env.VITE_GEMINI_API_KEY_1,
+    import.meta.env.VITE_GEMINI_API_KEY_2,
+    import.meta.env.VITE_GEMINI_API_KEY_3,
+    import.meta.env.VITE_GEMINI_API_KEY_4,
+    import.meta.env.VITE_GEMINI_API_KEY_5,
+    import.meta.env.VITE_GEMINI_API_KEY_6,
+    import.meta.env.VITE_GEMINI_API_KEY_7,
+    import.meta.env.VITE_GEMINI_API_KEY_8,
+    import.meta.env.VITE_GEMINI_API_KEY_9,
+  ].filter(key => !!key);
+
+  if (keys.length === 0) {
+    return process.env.GEMINI_API_KEY; // Fallback para a chave padrão do sistema
+  }
+
+  // Pegar uma chave aleatória do pool para distribuir a carga
+  return keys[Math.floor(Math.random() * keys.length)];
+};
+
+const getAIInstance = () => {
+  const apiKey = getRotatingKey();
+  if (!apiKey) {
+    throw new Error("Nenhuma chave API do Gemini configurada. Por favor, adicione as chaves no ambiente.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 const getSystemInstruction = (profile?: any) => {
   let context = "Você é um assistente de nutrição especializado e tecnológico (NutriLens). Responda em Português.";
@@ -15,6 +42,7 @@ const getSystemInstruction = (profile?: any) => {
 
 export async function askNutritionAssistant(prompt: string, history: { role: 'user' | 'model', parts: { text: string }[] }[] = [], profile?: any) {
   try {
+    const ai = getAIInstance();
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
       contents: [...history, { role: 'user', parts: [{ text: prompt }] }],
@@ -31,6 +59,7 @@ export async function askNutritionAssistant(prompt: string, history: { role: 'us
 
 export async function analyzeFoodImage(base64Image: string, profile?: any) {
   try {
+    const ai = getAIInstance();
     const imagePart = {
       inlineData: {
         mimeType: "image/jpeg",

@@ -23,7 +23,14 @@ import {
   Coffee,
   Flame,
   Droplets,
-  Target
+  Target,
+  Edit3,
+  AlertCircle,
+  Type,
+  Moon,
+  Globe,
+  Share2,
+  Star
 } from 'lucide-react';
 import { askNutritionAssistant, analyzeFoodImage } from '../services/geminiService.ts';
 import { getSupabase } from '../lib/supabase.ts';
@@ -280,22 +287,78 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
           )}
 
           {activeTab === 'profile' && (
-            <div className="flex-1 p-6 space-y-6">
-               <div className="flex flex-col items-center gap-4 py-8">
-                  <div className="w-24 h-24 rounded-full bg-white/5 border border-white/5 flex items-center justify-center overflow-hidden">
-                    <User size={48} className="text-white/20" />
+            <motion.div key="profile" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="space-y-6 pt-4 pb-12">
+               {/* User Header */}
+               <div className="flex flex-col items-center gap-4 py-6">
+                  <div className="relative group">
+                    <div className="w-24 h-24 rounded-[36px] bg-white/5 border-2 border-white/5 flex items-center justify-center overflow-hidden">
+                      <User size={48} className="text-white/20" />
+                    </div>
+                    <button className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#4ADE80] rounded-2xl flex items-center justify-center text-[#0A0B0D] shadow-xl border-4 border-[#0A0B0D]">
+                      <Edit3 size={16} strokeWidth={3} />
+                    </button>
                   </div>
                   <div className="text-center">
-                    <h2 className="text-xl font-black uppercase tracking-tight">{userProfile?.name}</h2>
-                    <p className="text-white/20 text-xs font-bold uppercase tracking-widest mt-1">{userProfile?.email}</p>
+                    <h2 className="text-2xl font-black uppercase tracking-tight">{userProfile?.name || 'Utilizador'}</h2>
+                    <div className="flex items-center justify-center gap-2 mt-1">
+                      <span className="px-3 py-1 bg-[#4ADE80]/10 text-[#4ADE80] text-[10px] font-black rounded-full uppercase tracking-widest border border-[#4ADE80]/10">Plano {userProfile?.subscription_plan || 'Grátis'}</span>
+                      <span className="text-white/20 text-[10px] font-bold uppercase tracking-widest">{userProfile?.province}</span>
+                    </div>
                   </div>
                </div>
-               <div className="space-y-3">
-                  <button onClick={onLogout} className="w-full p-5 bg-red-500/10 border border-red-500/20 text-red-500 font-black rounded-2xl flex items-center justify-center gap-2">
+
+               {/* Health Data Grid */}
+               <div className="space-y-4">
+                  <h3 className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] ml-2">Dados de Saúde & Quiz</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <ProfileDataCard label="Peso" value={`${userProfile?.weight || '--'} kg`} icon={<Zap size={14} className="text-[#4ADE80]" />} />
+                    <ProfileDataCard label="Altura" value={`${userProfile?.height || '--'} cm`} icon={<Target size={14} className="text-[#00D1FF]" />} />
+                    <ProfileDataCard label="Objectivo" value={userProfile?.goal === 'weight_loss' ? 'Perder Peso' : 'Comer Melhor'} icon={<Activity size={14} className="text-[#FFB800]" />} />
+                    <ProfileDataCard label="Dieta" value={userProfile?.diet === 'omnivore' ? 'Omnívoro' : 'Equilibrado'} icon={<Heart size={14} className="text-[#A855F7]" />} />
+                  </div>
+                  
+                  {/* Restrictions / Allergies */}
+                  <div className="p-5 bg-[#121417] border border-white/5 rounded-3xl">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 bg-red-500/10 rounded-xl flex items-center justify-center">
+                        <AlertCircle size={16} className="text-red-500" />
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-widest text-white/60">Alergias & Restrições</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                       {userProfile?.restrictions && userProfile.restrictions.length > 0 ? (
+                         userProfile.restrictions.map((r: string) => (
+                           <span key={r} className="px-3 py-1.5 bg-white/5 text-white/60 text-[11px] font-bold rounded-xl border border-white/5">{r}</span>
+                         ))
+                       ) : (
+                         <p className="text-[11px] text-white/20 font-medium italic">Nenhuma restrição registada.</p>
+                       )}
+                    </div>
+                  </div>
+               </div>
+
+               {/* App Settings */}
+               <div className="space-y-4">
+                  <h3 className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] ml-2">Configurações do App</h3>
+                  <div className="bg-[#121417] border border-white/5 rounded-[32px] overflow-hidden">
+                    <SettingItem icon={<Bell size={18} />} label="Notificações de Refeição" value="Ativo" />
+                    <SettingItem icon={<Type size={18} />} label="Modo Acessibilidade" value="Letras Médias" />
+                    <SettingItem icon={<Moon size={18} />} label="Tema" value="Escuro" />
+                    <SettingItem icon={<Globe size={18} />} label="Idioma" value="Português (AO)" />
+                    <SettingItem icon={<Share2 size={18} />} label="Partilhar App" onClick={() => {}} />
+                    <SettingItem icon={<Star size={18} />} label="Avaliar na Loja" last onClick={() => {}} />
+                  </div>
+               </div>
+
+               <div className="pt-4 space-y-3">
+                  <button onClick={onLogout} className="w-full py-5 bg-red-500/5 border border-red-500/10 text-red-500 font-black rounded-3xl flex items-center justify-center gap-2 hover:bg-red-500/10 transition-colors">
                     <LogOut size={18} /> SAIR DA CONTA
                   </button>
+                  <button className="w-full py-4 text-white/10 text-[9px] font-black uppercase tracking-[0.3em] hover:text-red-500 transition-colors">
+                    Remover todos os dados da conta
+                  </button>
                </div>
-            </div>
+            </motion.div>
           )}
         </AnimatePresence>
       </main>
@@ -377,6 +440,34 @@ function NavButton({ active, icon, label, onClick }: { active: boolean, icon: an
       <div className={`${active ? 'text-[#4ADE80]' : 'text-white/20'} transition-all`}>{icon}</div>
       <span className={`text-[8px] font-black uppercase tracking-widest ${active ? 'text-[#4ADE80]' : 'text-white/20'}`}>{label}</span>
     </button>
+  );
+}
+
+function SettingItem({ icon, label, value, last, onClick }: { icon: any, label: string, value?: string, last?: boolean, onClick?: () => void }) {
+  return (
+    <button onClick={onClick} className={`w-full p-5 flex items-center justify-between group transition-colors hover:bg-white/[0.02] ${!last ? 'border-b border-white/[0.03]' : ''}`}>
+      <div className="flex items-center gap-4">
+        <div className="text-white/30 group-hover:text-[#4ADE80] transition-colors">{icon}</div>
+        <span className="text-sm font-bold text-white/80">{label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        {value && <span className="text-[10px] font-black uppercase tracking-widest text-white/20 group-hover:text-[#4ADE80] transition-colors">{value}</span>}
+        <ChevronRight size={14} className="text-white/10 group-hover:text-[#4ADE80]" />
+      </div>
+    </button>
+  );
+}
+
+function ProfileDataCard({ label, value, icon }: { label: string, value: string, icon: any }) {
+  return (
+    <div className="p-5 bg-[#121417] border border-white/5 rounded-3xl flex flex-col items-center justify-center relative overflow-hidden group">
+      <div className="absolute top-2 right-2 opacity-20 group-hover:opacity-100 transition-opacity">
+        <Edit3 size={10} className="text-white" />
+      </div>
+      <div className="mb-2">{icon}</div>
+      <span className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-1">{label}</span>
+      <span className="text-sm font-black text-white tracking-tight">{value}</span>
+    </div>
   );
 }
 
