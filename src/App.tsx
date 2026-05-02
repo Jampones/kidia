@@ -75,6 +75,8 @@ export default function App() {
               name: fullName || pendingProfileData.name,
               email: email,
               profile_type: pendingProfileData.profile_type,
+              province: pendingProfileData.province,
+              gender: pendingProfileData.gender,
               age: parseInt(pendingProfileData.age),
               goal: pendingProfileData.goal,
               diet: pendingProfileData.diet,
