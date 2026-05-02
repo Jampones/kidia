@@ -28,35 +28,35 @@ export default function AuthScreen({ onBack, onAuth, error }: AuthScreenProps) {
       </button>
 
       <div className="mt-12 mb-10">
-        <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-primary/20">
-          <Zap size={24} className="text-black" />
+        <div className="w-14 h-14 bg-[#4ADE80] rounded-2xl flex items-center justify-center mb-8 shadow-2xl shadow-[#4ADE80]/20">
+          <Zap size={28} className="text-[#0A0B0D]" />
         </div>
-        <h2 className="text-3xl font-bold mb-2">
-          {isSignUp ? 'Criar sua conta' : 'Bem-vindo de volta'}
+        <h2 className="text-4xl font-black mb-3 tracking-tight text-white">
+          {isSignUp ? 'Criar conta' : 'Aceder'}
         </h2>
-        <p className="text-white/40 text-sm">
-          {isSignUp ? 'Comece sua jornada nutricional hoje.' : 'Aceda ao seu perfil e histórico.'}
+        <p className="text-white/40 text-sm font-medium">
+          {isSignUp ? 'Começa a tua jornada hoje.' : 'Bem-vindo de volta à tua nutrição.'}
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="text-[10px] uppercase font-bold text-white/40 ml-1 mb-2 block tracking-widest font-mono">Email</label>
+          <label className="text-[10px] uppercase font-black text-[#4ADE80] ml-1 mb-2.5 block tracking-[0.2em]">Email</label>
           <input 
             type="email" 
             required
-            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm focus:border-primary focus:outline-none transition-all"
+            className="w-full bg-[#121417] border border-white/5 rounded-2xl px-6 py-4.5 text-sm focus:border-[#4ADE80]/50 focus:outline-none transition-all placeholder:text-white/10"
             placeholder="seu@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
         <div>
-          <label className="text-[10px] uppercase font-bold text-white/40 ml-1 mb-2 block tracking-widest font-mono">Senha</label>
+          <label className="text-[10px] uppercase font-black text-[#4ADE80] ml-1 mb-2.5 block tracking-[0.2em]">Senha</label>
           <input 
             type="password" 
             required
-            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm focus:border-primary focus:outline-none transition-all"
+            className="w-full bg-[#121417] border border-white/5 rounded-2xl px-6 py-4.5 text-sm focus:border-[#4ADE80]/50 focus:outline-none transition-all placeholder:text-white/10"
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -64,7 +64,7 @@ export default function AuthScreen({ onBack, onAuth, error }: AuthScreenProps) {
         </div>
 
         {error && (
-          <p className="text-red-400 text-xs text-center font-medium bg-red-400/10 py-3 rounded-xl border border-red-400/20">
+          <p className="text-red-400 text-[11px] font-bold text-center bg-red-400/5 py-4 rounded-2xl border border-red-400/10">
             {error}
           </p>
         )}
@@ -72,9 +72,9 @@ export default function AuthScreen({ onBack, onAuth, error }: AuthScreenProps) {
         <button 
           type="submit"
           disabled={loading}
-          className="btn-primary mt-6 disabled:opacity-50"
+          className="w-full py-5 bg-[#4ADE80] text-[#0A0B0D] font-black rounded-2xl mt-4 disabled:opacity-50 transition-transform active:scale-[0.97]"
         >
-          {loading ? <Loader2 className="animate-spin" /> : (isSignUp ? 'Cadastrar' : 'Entrar')}
+          {loading ? <Loader2 className="animate-spin mx-auto" /> : (isSignUp ? 'CADASTRAR' : 'ENTRAR AGORA')}
         </button>
       </form>
 

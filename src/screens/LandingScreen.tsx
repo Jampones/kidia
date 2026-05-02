@@ -9,64 +9,66 @@ interface LandingScreenProps {
 
 export default function LandingScreen({ onStart, onLogin }: LandingScreenProps) {
   return (
-    <div className="flex-1 flex flex-col bg-[#0A0B0D] overflow-hidden relative">
-      {/* Hero Image Section - Full Background vibe */}
-      <div className="absolute inset-0 h-[60vh] w-full">
+    <div className="flex-1 flex flex-col bg-[#0A0B0D] h-screen overflow-hidden relative font-sans">
+      {/* Background Image Container */}
+      <div className="absolute top-0 w-full h-[65%] z-0">
         <img 
           src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=2000&auto=format&fit=crop" 
           className="w-full h-full object-cover"
-          alt="Gourmet grilled food"
+          alt="Gourmet Food Reference"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0A0B0D] via-[#0A0B0D]/40 to-transparent" />
+        {/* Deep gradient to blend image with the card better */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0A0B0D] via-[#0A0B0D]/20 to-transparent" />
+        <div className="absolute inset-0 bg-black/20" />
       </div>
 
-      {/* Content Section - The Dark Overlay Card */}
+      {/* Content Card - Ultra Compact for maximum image visibility */}
       <motion.div 
         initial={{ y: 150, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-        className="mt-auto bg-[#0A0B0D] rounded-t-[44px] px-8 pt-12 pb-14 relative z-20 flex flex-col shadow-[0_-20px_40px_rgba(0,0,0,0.4)]"
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="mt-auto bg-[#0A0B0D] rounded-t-[40px] px-8 pt-7 pb-6 relative z-10 flex flex-col shadow-[0_-30px_60px_rgba(0,0,0,1)] border-t border-white/[0.02]"
       >
-        <div className="mb-8 self-start">
-          <div className="px-5 py-2.5 border-2 border-[#1E6B44] bg-[#0F2A1D] rounded-full">
-            <span className="text-[11px] font-extrabold text-[#4ADE80] uppercase tracking-[0.25em] font-sans">
+        <div className="mb-4 flex justify-start">
+          <div className="px-3 py-1 border border-[#1E6B44] bg-[#0F2A1D]/80 rounded-full">
+            <span className="text-[8px] font-black text-[#4ADE80] uppercase tracking-[0.15em]">
               Nutrição Personalizada
             </span>
           </div>
         </div>
 
-        <h1 className="text-[48px] font-black mb-4 tracking-[-0.04em] leading-none text-white font-sans">
+        <h1 className="text-3xl font-black mb-1.5 tracking-tight text-white">
           NutriLens
         </h1>
         
-        <p className="text-white/50 leading-relaxed mb-12 text-[16px] font-medium max-w-[340px]">
+        <p className="text-white/40 leading-snug mb-7 text-xs font-medium max-w-[240px]">
           O teu guia nutricional pessoal. Fotografa qualquer prato e descobre tudo sobre a tua alimentação.
         </p>
 
-        <div className="space-y-4">
+        <div className="space-y-2.5">
           <button 
             onClick={onStart}
-            className="w-full py-5 bg-[#4ADE80] text-black font-extrabold rounded-[26px] flex items-center justify-center gap-3 transition-transform active:scale-[0.97] shadow-2xl shadow-[#4ADE80]/20"
+            className="w-full py-3 bg-[#4ADE80] text-[#0A0B0D] font-extrabold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.97] shadow-lg shadow-[#4ADE80]/5"
           >
-            <span className="text-lg">Começar a jornada</span>
-            <ArrowRight size={22} strokeWidth={3} />
+            <span className="text-sm">Começar a jornada</span>
+            <ArrowRight size={16} strokeWidth={3} />
           </button>
 
-          <button className="w-full py-5 bg-[#121417]/40 border border-white/5 text-white/40 font-bold rounded-[26px] flex items-center justify-center gap-3 transition-all hover:bg-white/10 active:scale-[0.98]">
-            <Compass size={20} className="text-white/60" />
-            <span className="text-sm">Testar sem conta (limitado)</span>
+          <button className="w-full py-3 bg-[#121417] border border-white/5 text-white/30 font-bold rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+            <Compass size={14} className="text-white/20" />
+            <span className="text-[11px] uppercase tracking-wider">Testar sem conta</span>
           </button>
 
-          <div className="text-center pt-6">
-            <p className="text-[14px] text-white/40 font-semibold tracking-tight">
-              Já tenho conta — <button onClick={onLogin} className="text-[#4ADE80] font-black hover:underline transition-all">Entrar</button>
+          <div className="text-center pt-3">
+            <p className="text-[11px] text-white/30 font-semibold">
+              Já tenho conta — <button onClick={onLogin} className="text-[#4ADE80] font-black hover:opacity-80 transition-opacity">Entrar</button>
             </p>
           </div>
         </div>
       </motion.div>
       
-      {/* Minimalistic Home Indicator */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-36 h-1.5 bg-white/15 rounded-full z-30" />
+      {/* Home Indicator */}
+      <div className="w-32 h-1 bg-white/10 rounded-full mx-auto mb-2 mt-4" />
     </div>
   );
 }

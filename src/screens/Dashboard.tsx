@@ -97,18 +97,18 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-dark-bg">
-      <header className="p-5 glass-header flex items-center justify-between sticky top-0 z-50">
+      <header className="px-6 py-5 bg-[#0A0B0D]/80 backdrop-blur-xl border-b border-white/[0.03] flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Zap size={18} className="text-black" />
+          <div className="w-9 h-9 rounded-xl bg-[#4ADE80] flex items-center justify-center shadow-lg shadow-[#4ADE80]/20">
+            <Zap size={20} className="text-[#0A0B0D]" />
           </div>
-          <h1 className="font-bold tracking-tight uppercase font-mono text-sm">NutriLens</h1>
+          <h1 className="font-black tracking-tight uppercase text-sm text-white">NutriLens</h1>
         </div>
-        <div className="flex gap-1 bg-white/5 p-1 rounded-xl">
+        <div className="flex gap-1.5 bg-white/[0.03] p-1.5 rounded-2xl border border-white/[0.03]">
           <TabButton active={activeTab === 'chat'} icon={<MessageSquare size={18} />} onClick={() => setActiveTab('chat')} />
           <TabButton active={activeTab === 'scanner'} icon={<Camera size={18} />} onClick={() => setActiveTab('scanner')} />
           <TabButton active={activeTab === 'history'} icon={<History size={18} />} onClick={() => setActiveTab('history')} />
-          <button onClick={onLogout} className="p-2 text-white/20 hover:text-red-500 transition-colors"><LogOut size={18} /></button>
+          <button onClick={onLogout} className="p-2.5 text-white/10 hover:text-red-500 transition-colors"><LogOut size={18} /></button>
         </div>
       </header>
 
@@ -200,7 +200,7 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
 }
 
 function TabButton({ active, icon, onClick }: { active: boolean, icon: any, onClick: () => void }) {
-  return <button onClick={onClick} className={`p-2 rounded-xl transition-all ${active ? 'bg-primary text-black' : 'text-white/40 hover:text-white'}`}>{icon}</button>;
+  return <button onClick={onClick} className={`p-2.5 rounded-xl transition-all duration-300 ${active ? 'bg-[#4ADE80] text-[#0A0B0D] shadow-lg shadow-[#4ADE80]/20 scale-110' : 'text-white/20 hover:text-white/60 hover:bg-white/5'}`}>{icon}</button>;
 }
 
 function StatCard({ icon, label, value, color }: { icon: any, label: string, value: string, color: string }) {
