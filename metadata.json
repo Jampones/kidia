@@ -1,5 +1,5 @@
 {
-  "name": "NeonNutri AI",
+  "name": "kidiaNutri",
   "description": "AI-powered nutrition assistant with food recognition and nutritional analysis.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["AI Food Recognition", "Nutritional Chatbot", "Neon Minimalist UI"]

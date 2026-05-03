@@ -150,7 +150,7 @@ export default function OnboardingFlow({ onComplete, onBack }: OnboardingFlowPro
         <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} className="mt-auto bg-[#0A0B0D] rounded-t-[40px] px-8 pt-10 pb-12 relative z-10">
           <div className="mb-6"><div className="inline-flex px-3 py-1 border border-[#FFA500]/40 bg-[#FFA500]/5 rounded-full"><span className="text-[9px] font-black text-[#FFA500] uppercase tracking-[0.1em]">A NOSSA MISSÃO</span></div></div>
           <h2 className="text-[32px] font-black text-white leading-[1] mb-6">Comer bem com o que tens na mesa 🍽️</h2>
-          <p className="text-white/40 text-[14px] leading-relaxed mb-10 font-medium">O NutriLens é o teu guia pessoal para comer melhor com os ingredientes locais, prevenindo a anemia e fortalecendo a tua saúde sem custos elevados.</p>
+          <p className="text-white/40 text-[14px] leading-relaxed mb-10 font-medium">O kidiaNutri é o teu guia pessoal para comer melhor com os ingredientes locais, prevenindo a anemia e fortalecendo a tua saúde sem custos elevados.</p>
           <button onClick={() => setView('profile_select')} className="w-full py-5 bg-[#4ADE80] text-[#0A0B0D] font-black rounded-2xl flex items-center justify-center shadow-xl shadow-[#4ADE80]/10">Isso é para mim! ❤️</button>
           <button onClick={handleSkip} className="mt-8 mx-auto text-white/20 text-[10px] font-black uppercase tracking-[0.2em] hover:text-[#4ADE80] transition-colors">Pular Quiz</button>
         </motion.div>

@@ -38,7 +38,8 @@ import {
   Scan,
   Maximize,
   Eye,
-  Utensils
+  Utensils,
+  Info
 } from 'lucide-react';
 import { askNutritionAssistant, analyzeFoodImage } from '../services/geminiService.ts';
 import { getSupabase } from '../lib/supabase.ts';
@@ -283,14 +284,14 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
                 </div>
                 <div className="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6 no-scrollbar">
                   <MealThumbCard 
-                    image="https://images.unsplash.com/photo-1590301157890-4810ed352733?q=80&w=400&auto=format&fit=crop"
+                    image="https://feed.continente.pt/media/i0zd0jpo/ovo-estrelado.jpg"
                     time="07:00"
                     label="Café da manhã"
-                    name="Papaia com Iogurte"
-                    kcal="280 kcal"
+                    name="Sandes de Ovo"
+                    kcal="320 kcal"
                   />
                   <MealThumbCard 
-                    image="https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?q=80&w=400&auto=format&fit=crop"
+                    image="https://static.novavaga.co.ao/global/image.jpg?brand=NJ&type=generate&guid=539a3c46-08bb-4efd-b7e5-6fc4f7635e2d"
                     time="12:30"
                     label="Almoço"
                     name="Mufete Completo"
@@ -298,7 +299,7 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
                     active
                   />
                   <MealThumbCard 
-                    image="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400&auto=format&fit=crop"
+                    image="https://www.receitasdeculinaria.tv/wp-content/uploads/2022/09/calulu-de-peixe-misto.jpg"
                     time="19:00"
                     label="Jantar"
                     name="Calulu de Peixe"
@@ -338,18 +339,18 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
                 </div>
                 <div className="space-y-3">
                   <AnalysisRow 
-                    image="https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?q=80&w=150"
+                    image="https://static.novavaga.co.ao/global/image.jpg?brand=NJ&type=generate&guid=539a3c46-08bb-4efd-b7e5-6fc4f7635e2d"
                     name="Mufete com Funge"
                     info="620 kcal • Almoço"
                     date="01/05/2026"
                     score={91}
                   />
                   <AnalysisRow 
-                    image="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=150"
-                    name="Arroz com Feijão e Frango"
-                    info="540 kcal • Almoço"
-                    date="01/05/2026"
-                    score={85}
+                    image="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS00w2w7pazlruPBQVQ_FjRfAFNdPeLXQ5JVg&s"
+                    name="Frango com Quiabo e Arroz"
+                    info="580 kcal • Almoço"
+                    date="02/05/2026"
+                    score={88}
                   />
                 </div>
               </div>
@@ -411,9 +412,31 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
                     icon={<Sun size={18} />} 
                     label="Café da manhã" 
                     time="07:00" 
-                    kcal="280 kcal" 
+                    kcal="320 kcal" 
                     isOpen={expandedMeal === 'café'}
                     onToggle={() => setExpandedMeal(expandedMeal === 'café' ? null : 'café')}
+                    details={{
+                      image: "https://feed.continente.pt/media/i0zd0jpo/ovo-estrelado.jpg",
+                      title: "Sandes de Ovo Nutritiva",
+                      description: "Pão de água fresco com ovo mexido ou estrelado com pouco óleo. O início perfeito para um dia com energia estável.",
+                      tags: ['Proteína', 'Saciedade', 'Rápido', 'Pequeno Almoço'],
+                      prepTime: "5 min preparo",
+                      macros: { protein: '18g', carbs: '35g', fat: '12g' },
+                      micros: { vitamins: 'Vitamina D, B12, Colina', minerals: 'Fósforo, Ferro' },
+                      ingredients: ['1 Pão de água ou integral', '2 Ovos frescos', 'Fio de azeite ou óleo', 'Sal e pimenta preta'],
+                      health: {
+                        recommendedFor: 'Estudantes e trabalhadores que precisam de concentração e evitar fome no meio da manhã.',
+                        avoidIf: 'Indivíduos com restrição severa de colesterol devem usar apenas as claras.',
+                        general: 'A colina presente na gema do ovo é essencial para a memória e saúde cerebral.'
+                      },
+                      steps: [
+                        'Aqueça levemente o pão para ficar crocante.',
+                        'Numa frigideira antiaderente, coloque um fio de óleo.',
+                        'Prepare os ovos (estrelados ou mexidos) temperando com pouco sal.',
+                        'Coloque os ovos no pão e feche.',
+                        'Acompanhe com um chá de gengibre ou café sem açúcar.'
+                      ]
+                    }}
                  />
                  
                  <MealCard 
@@ -424,11 +447,26 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
                     isOpen={expandedMeal === 'almoço'}
                     onToggle={() => setExpandedMeal(expandedMeal === 'almoço' ? null : 'almoço')}
                     details={{
-                      image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?q=80&w=600&auto=format&fit=crop",
+                      image: "https://static.novavaga.co.ao/global/image.jpg?brand=NJ&type=generate&guid=539a3c46-08bb-4efd-b7e5-6fc4f7635e2d",
                       title: "Mufete Completo",
                       description: "Peixe grelhado (tilápia ou cacusso), funge de milho, feijão de óleo de palma e banana da terra. O prato mais nutritivo de Angola!",
                       tags: ['Proteína', 'Ferro', 'Energia', 'Tradicional'],
-                      prepTime: "35 min preparo"
+                      prepTime: "35 min preparo",
+                      macros: { protein: '45g', carbs: '82g', fat: '18g' },
+                      micros: { vitamins: 'Vitamina B12, B6, Vitamina D', minerals: 'Ferro, Selénio, Óleo de Palma (Betacaroteno)' },
+                      ingredients: ['Peixe Tilápia ou Cacuso', 'Farinha de Milho', 'Feijão Manteiga', 'Óleo de Palma', 'Banana Pão', 'Cebola, Alho, Sal'],
+                      health: {
+                        recommendedFor: 'Atletas, pessoas em fase de crescimento e para prevenir anemia ferropriva.',
+                        avoidIf: 'Pessoas com ácido úrico elevado (Gota) devem moderar a porção de feijão.',
+                        general: 'O óleo de palma angolano é uma das melhores fontes naturais de Betacaroteno (Vitamina A).'
+                      },
+                      steps: [
+                        'Tempere o peixe com sal, alho e limão, e grelhe na brasa.',
+                        'Cozinhe o feijão até ficar macio e tempere com óleo de palma.',
+                        'Prepare o funge mexendo a farinha de milho em água quente até dar o ponto.',
+                        'Cozas as bananas em água e sal.',
+                        'Prepare o molho de cebola, malagueta e vinagrete para acompanhar.'
+                      ]
                     }}
                  />
 
@@ -439,6 +477,28 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
                     kcal="480 kcal" 
                     isOpen={expandedMeal === 'jantar'}
                     onToggle={() => setExpandedMeal(expandedMeal === 'jantar' ? null : 'jantar')}
+                    details={{
+                      image: "https://www.receitasdeculinaria.tv/wp-content/uploads/2022/09/calulu-de-peixe-misto.jpg",
+                      title: "Calulu de Peixe",
+                      description: "Tradicional calulu de peixe misto acompanhado com funge. Prato rico em ómega-3 e fibras vegetais das folhas.",
+                      tags: ['Ómega-3', 'Nutritivo', 'Tradicional', 'Fibras'],
+                      prepTime: "45 min preparo",
+                      macros: { protein: '38g', carbs: '65g', fat: '12g' },
+                      micros: { vitamins: 'Vitamina K, Vitamina E, Magnésio', minerals: 'Cálcio, Potássio' },
+                      ingredients: ['Peixe Fresco e Seco', 'Folhas de Rama de Batata ou Espinafre', 'Gongo ou Quiabos', 'Óleo de Palma', 'Cebola, Tomate'],
+                      health: {
+                        recommendedFor: 'Saúde cardiovascular e controle do colesterol devido às gorduras saudáveis e fibras.',
+                        avoidIf: 'Indivíduos sensíveis ao excesso de oxalatos (presentes em algumas folhas verdes).',
+                        general: 'As folhas verdes do calulu são excelentes para a saúde óssea devido ao alto teor de minerais.'
+                      },
+                      steps: [
+                        'Coloque o peixe de molho se for seco. Limpe o peixe fresco.',
+                        'Faça um refogado de cebola e tomate no óleo de palma.',
+                        'Adicione o peixe e as folhas verdes em camadas.',
+                        'Adicione os quiabos e deixe cozer em lume brando até as folhas murcharem.',
+                        'Acompanhe com funge de milho ou bombó.'
+                      ]
+                    }}
                  />
 
                  <MealCard 
@@ -448,6 +508,28 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
                     kcal="220 kcal" 
                     isOpen={expandedMeal === 'lanche'}
                     onToggle={() => setExpandedMeal(expandedMeal === 'lanche' ? null : 'lanche')}
+                    details={{
+                      image: "https://www.receitaafetiva.com.br/wp-content/uploads/2019/06/receita-de-arroz-doce-com-leite-condensado-12.jpg",
+                      title: "Arroz Doce Tradicional",
+                      description: "O conforto num prato. Arroz cozido em leite cremoso com um toque de canela para aquecer o coração.",
+                      tags: ['Energia', 'Cremoso', 'Tradicional', 'Doce'],
+                      prepTime: "25 min preparo",
+                      macros: { protein: '6g', carbs: '45g', fat: '4g' },
+                      micros: { vitamins: 'Vitamina B2, Cálcio', minerals: 'Zinco, Fósforo' },
+                      ingredients: ['1 chávena de Arroz', '2 chávenas de Leite', 'Casca de limão ou laranja', 'Pau de canela', 'Canela em pó'],
+                      health: {
+                        recommendedFor: 'Pessoas que precisam de um aporte extra de energia rápida ou pós-treino moderado.',
+                        avoidIf: 'Diabéticos devem substituir o açúcar por adoçante culinário ou evitar.',
+                        general: 'A canela ajuda a regular ligeiramente os picos de insulina causados pelo arroz.'
+                      },
+                      steps: [
+                        'Coza o arroz em água com a casca de limão e o pau de canela até a água secar.',
+                        'Adicione o leite aos poucos, mexendo sempre.',
+                        'Deixe cozinhar em lume brando até o arroz ficar muito macio e o leite cremoso.',
+                        'Adoce a gosto no final do processo.',
+                        'Sirva polvilhado com canela em pó por cima.'
+                      ]
+                    }}
                  />
               </div>
 
@@ -600,7 +682,7 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
           </Overlay>
         )}
         {showChat && (
-          <Overlay title="Assistente NutriLens" onClose={() => setShowChat(false)}>
+          <Overlay title="Assistente kidiaNutri" onClose={() => setShowChat(false)}>
              <ChatContent 
                 messages={messages} 
                 isTyping={isTyping} 
@@ -660,32 +742,129 @@ function MealCard({ icon, label, time, kcal, isOpen, onToggle, details }: { icon
              <div className="relative aspect-video">
                 <img src={details.image} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0A0B0D] via-transparent to-transparent" />
-             </div>
-             <div className="p-6 pt-2">
-                <h3 className="text-xl font-black text-white leading-tight mb-3">{details.title}</h3>
-                <p className="text-white/40 text-xs font-medium leading-relaxed mb-6 italic">
-                  {details.description}
-                </p>
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {details.tags.map((t: string) => (
-                    <span key={t} className="px-4 py-2 bg-[#4ADE80]/10 text-[#4ADE80] text-[9px] font-black rounded-xl border border-[#4ADE80]/10 uppercase tracking-widest">
+                <div className="absolute top-4 left-4 flex gap-1.5">
+                   {details.tags.slice(0, 2).map((t: string) => (
+                    <span key={t} className="px-3 py-1 bg-black/50 backdrop-blur-md border border-white/10 rounded-full text-[8px] font-black uppercase tracking-widest text-white shadow-xl">
                       {t}
                     </span>
-                  ))}
+                   ))}
                 </div>
-                <div className="flex items-center justify-between pt-6 border-t border-white/[0.03]">
-                  <div className="flex items-center gap-2 text-white/20">
-                     <History size={14} />
-                     <span className="text-[10px] font-bold uppercase tracking-widest">{details.prepTime}</span>
+             </div>
+
+             <div className="p-6">
+                <h3 className="text-xl font-black text-white leading-tight mb-2">{details.title}</h3>
+                <p className="text-white/40 text-xs font-medium leading-relaxed italic mb-6">
+                  {details.description}
+                </p>
+
+                {/* Advanced Nutritional Info Grid */}
+                {details.macros && (
+                  <div className="grid grid-cols-3 gap-3 mb-8">
+                     <NutriMetric label="Proteína" value={details.macros.protein} color="#4ADE80" />
+                     <NutriMetric label="Carbos" value={details.macros.carbs} color="#FFB800" />
+                     <NutriMetric label="Gordura" value={details.macros.fat} color="#00D1FF" />
                   </div>
-                  <button className="px-6 py-3 bg-[#4ADE80] text-[#0A0B0D] text-[10px] font-black rounded-2xl flex items-center gap-2 active:scale-95 transition-all shadow-lg shadow-[#4ADE80]/10">
-                     <Plus size={14} strokeWidth={4} /> Adicionar ao diário
-                  </button>
+                )}
+
+                {/* Micronutrients */}
+                {details.micros && (
+                  <div className="space-y-4 mb-8 bg-white/[0.02] p-5 rounded-2xl border border-white/[0.03]">
+                     <div className="flex items-center gap-2 mb-1">
+                        <Zap size={14} className="text-[#FFB800]" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/30">Micronutrientes Chave</span>
+                     </div>
+                     <div className="space-y-2">
+                        <p className="text-[11px] text-white/60 font-medium leading-tight">
+                           <span className="text-white font-black uppercase tracking-tighter mr-1">Vitaminas:</span> {details.micros.vitamins}
+                        </p>
+                        <p className="text-[11px] text-white/60 font-medium leading-tight">
+                           <span className="text-white font-black uppercase tracking-tighter mr-1">Minerais:</span> {details.micros.minerals}
+                        </p>
+                     </div>
+                  </div>
+                )}
+
+                {/* Health Advice Section */}
+                {details.health && (
+                  <div className="space-y-4 mb-8">
+                    <div className="flex items-center gap-2">
+                      <Heart size={16} className="text-[#FF4F4F]" />
+                      <h4 className="text-[11px] font-black uppercase tracking-widest text-[#FF4F4F]">Conselho de Saúde</h4>
+                    </div>
+                    
+                    <div className="space-y-4">
+                       <div className="p-4 bg-[#4ADE80]/5 border border-[#4ADE80]/10 rounded-2xl">
+                          <span className="text-[9px] font-black text-[#4ADE80] uppercase tracking-widest block mb-1">Indicado Para:</span>
+                          <p className="text-[11px] text-[#4ADE80]/70 font-medium italic leading-relaxed">{details.health.recommendedFor}</p>
+                       </div>
+                       <div className="p-4 bg-red-500/5 border border-red-500/10 rounded-2xl">
+                          <span className="text-[9px] font-black text-red-500 uppercase tracking-widest block mb-1">Cuidado se:</span>
+                          <p className="text-[11px] text-red-500/70 font-medium italic leading-relaxed">{details.health.avoidIf}</p>
+                       </div>
+                       <div className="flex items-start gap-3 px-1">
+                          <Info size={14} className="text-white/20 shrink-0 mt-0.5" />
+                          <p className="text-[10px] text-white/30 font-medium leading-relaxed italic">{details.health.general}</p>
+                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Ingredients & Prep Steps */}
+                <div className="space-y-6 pt-6 border-t border-white/[0.03]">
+                  {details.ingredients && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                         <div className="w-1 h-1 bg-[#FFB800] rounded-full" />
+                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Composição Principal</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {details.ingredients.map((ing: string) => (
+                           <span key={ing} className="px-3 py-1.5 bg-white/5 border border-white/5 rounded-xl text-[10px] font-bold text-white/40">{ing}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {details.steps && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 mb-4">
+                         <div className="w-1 h-1 bg-[#4ADE80] rounded-full" />
+                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Modo de Preparo</span>
+                      </div>
+                      <div className="space-y-3">
+                        {details.steps.map((step: string, idx: number) => (
+                          <div key={idx} className="flex gap-4">
+                             <span className="text-[10px] font-black text-[#4ADE80] opacity-30 mt-0.5">{String(idx+1).padStart(2, '0')}</span>
+                             <p className="text-[11px] text-white/50 leading-relaxed font-medium">{step}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-6 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-white/20">
+                       <History size={14} />
+                       <span className="text-[10px] font-bold uppercase tracking-widest">{details.prepTime}</span>
+                    </div>
+                    <button className="px-6 py-4 bg-[#4ADE80] text-[#0A0B0D] text-[10px] font-black rounded-2xl flex items-center gap-2 active:scale-95 transition-all shadow-xl shadow-[#4ADE80]/10">
+                       <Plus size={16} strokeWidth={4} /> Adicionar ao diário
+                    </button>
+                  </div>
                 </div>
              </div>
            </div>
         </motion.div>
       )}
+    </div>
+  );
+}
+
+function NutriMetric({ label, value, color }: { label: string, value: string, color: string }) {
+  return (
+    <div className="p-3 bg-white/5 border border-white/5 rounded-2xl text-center">
+       <span className="text-[8px] font-black uppercase tracking-widest text-white/20 block mb-1">{label}</span>
+       <span className="text-sm font-black" style={{ color }}>{value}</span>
     </div>
   );
 }
@@ -821,7 +1000,7 @@ function ScannerContent({ previewUrl, isAnalyzing, scannerResult, onUpload, onCl
             {/* Main Capture Card */}
             <div className="relative rounded-[40px] overflow-hidden aspect-[4/3] bg-[#121417] border border-white/5 group shadow-2xl">
               <img 
-                src="https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?q=80&w=800&auto=format&fit=crop" 
+                src="https://static.novavaga.co.ao/global/image.jpg?brand=NJ&type=generate&guid=539a3c46-08bb-4efd-b7e5-6fc4f7635e2d" 
                 className="absolute inset-0 w-full h-full object-cover opacity-30 grayscale" 
                 alt="Background"
               />
@@ -989,7 +1168,7 @@ function ChatContent({ messages, isTyping, input, setInput, onSend, chatEndRef }
                 <div className="w-1.5 h-1.5 bg-[#4ADE80] rounded-full animate-bounce [animation-delay:-0.15s]" />
                 <div className="w-1.5 h-1.5 bg-[#4ADE80] rounded-full animate-bounce [animation-delay:-0.3s]" />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/30">NutriLens está a escrever...</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/30">kidiaNutri está a escrever...</span>
             </div>
           </div>
         )}

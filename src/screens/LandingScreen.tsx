@@ -38,7 +38,7 @@ export default function LandingScreen({ onStart, onLogin }: LandingScreenProps) 
         </div>
 
         <h1 className="text-3xl font-black mb-1.5 tracking-tight text-white">
-          NutriLens
+          kidiaNutri
         </h1>
         
         <p className="text-white/40 leading-snug mb-7 text-xs font-medium max-w-[240px]">

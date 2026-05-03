@@ -55,7 +55,7 @@ export default function AuthScreen({ onBack, onAuth, onSwitchToSignUp, error, in
 
           <section>
             <h3 className="text-[#4ADE80] font-bold uppercase text-[11px] mb-2 tracking-widest">Responsabilidade</h3>
-            <p>O NutriLens fornece orientações baseadas em dados científicos, mas não substitui a consulta com um nutricionista ou médico. Se tens condições de saúde graves, deves sempre seguir o conselho profissional.</p>
+            <p>O kidiaNutri fornece orientações baseadas em dados científicos, mas não substitui a consulta com um nutricionista ou médico. Se tens condições de saúde graves, deves sempre seguir o conselho profissional.</p>
           </section>
 
           <section>

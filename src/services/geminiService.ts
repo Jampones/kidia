@@ -30,7 +30,7 @@ const getAIInstance = () => {
 };
 
 const getSystemInstruction = (profile?: any) => {
-  let context = "Você é um assistente de nutrição especializado e tecnológico (NutriLens). Responda em Português.";
+  let context = "Você é um assistente de nutrição especializado e tecnológico (kidiaNutri). Responda em Português.";
   if (profile) {
     context += ` O usuário é do perfil: ${profile.profile_type}. Nome: ${profile.name}. Idade: ${profile.age}. Objetivo: ${profile.goal}. Dieta: ${profile.diet}. Condições de saúde: ${profile.restrictions?.join(', ') || 'nenhuma'}.`;
     if (profile.profile_type === 'child') context += " Como é uma criança, foque em crescimento e desenvolvimento saudável.";
