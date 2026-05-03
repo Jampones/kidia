@@ -139,6 +139,22 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
 
   const [activePlanDay, setActivePlanDay] = useState<'hoje' | 'amanhã' | 'depois'>('hoje');
   const [expandedMeal, setExpandedMeal] = useState<string | null>('almoço');
+  const [isProcessingPlan, setIsProcessingPlan] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
+
+  const handleRequestPersonalizedPlan = () => {
+    setIsProcessingPlan(true);
+    // Simular o "processamento pesado" de IA por 4 segundos
+    setTimeout(() => {
+      setIsProcessingPlan(false);
+      setShowPricing(true);
+    }, 4500);
+  };
+
+  const handleUpgrade = (planName: string) => {
+    const message = encodeURIComponent(`Olá! Gostaria de saber mais sobre o plano ${planName} do kidiaNutri.`);
+    window.open(`https://wa.me/244946188658?text=${message}`, '_blank');
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0A0B0D] text-white">
@@ -534,7 +550,10 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
               </div>
 
               {/* Personalized Plan CTA */}
-              <button className="w-full p-6 bg-[#FFB800] rounded-[32px] flex items-center justify-between group shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
+              <button 
+                onClick={handleRequestPersonalizedPlan}
+                className="w-full p-6 bg-[#FFB800] rounded-[32px] flex items-center justify-between group shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
                 <div className="flex items-center gap-4 text-left">
                   <div className="w-12 h-12 bg-[#0A0B0D]/10 rounded-2xl flex items-center justify-center">
                     <Calendar className="text-[#0A0B0D]" size={24} strokeWidth={2.5} />
@@ -693,6 +712,16 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
              />
           </Overlay>
         )}
+        {showPricing && (
+          <PricingOverlay 
+            onClose={() => setShowPricing(false)} 
+            onUpgrade={handleUpgrade}
+          />
+        )}
+
+        {isProcessingPlan && (
+          <ProcessingPlanOverlay userProfile={userProfile} />
+        )}
       </AnimatePresence>
 
       {/* Floating Chat Button */}
@@ -704,6 +733,149 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
           <MessageSquare size={24} />
         </button>
       )}
+    </div>
+  );
+}
+
+function ProcessingPlanOverlay({ userProfile }: { userProfile: any }) {
+  const [step, setStep] = useState(0);
+  const dataPoints = [
+    { label: 'Analizando perfil', value: userProfile?.name || 'Utilizador' },
+    { label: 'Calibrando metas', value: userProfile?.goal || 'Saúde' },
+    { label: 'Calculando macros', value: '2450 kcal/dia' },
+    { label: 'Processando restrições', value: userProfile?.restrictions?.length ? 'Ativo' : 'Nenhuma' },
+    { label: 'Integrando rede neural', value: 'Gemini 2.0 Flash' }
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStep(s => (s + 1) % dataPoints.length);
+    }, 800);
+    return () => clearInterval(interval);
+  }, [dataPoints.length]);
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-[#0A0B0D] flex flex-col items-center justify-center p-12 overflow-hidden">
+      {/* Background Matrix/Data Effect */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
+         <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] animate-spin-slow bg-[radial-gradient(circle,rgba(74,222,128,0.2)_1px,transparent_1px)] bg-[size:30px_30px]" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-sm text-center">
+        <motion.div 
+          animate={{ scale: [1, 1.1, 1], rotate: [0, 180, 360] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          className="w-24 h-24 border-4 border-[#4ADE80] border-t-transparent rounded-full mx-auto mb-12 shadow-[0_0_50px_rgba(74,222,128,0.3)]"
+        />
+        
+        <h2 className="text-3xl font-black mb-2 animate-pulse">Criando o Teu Futuro...</h2>
+        <p className="text-white/30 text-xs font-black uppercase tracking-[0.3em] mb-12">A processar o teu plano alimentar perfeito</p>
+
+        <div className="space-y-4 text-left">
+           {dataPoints.map((dp, i) => (
+             <motion.div 
+               key={i}
+               initial={{ x: -20, opacity: 0 }}
+               animate={{ 
+                 x: step === i ? 0 : -20, 
+                 opacity: step === i ? 1 : 0.2,
+                 scale: step === i ? 1.05 : 1
+               }}
+               className="flex items-center justify-between p-5 bg-white/5 rounded-2xl border border-white/5"
+             >
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{dp.label}</span>
+                <span className="text-xs font-black text-[#4ADE80]">{dp.value}</span>
+             </motion.div>
+           ))}
+        </div>
+
+        <div className="mt-12 flex gap-1 justify-center">
+           {[...Array(3)].map((_, i) => (
+             <motion.div 
+               key={i}
+               animate={{ opacity: [0.2, 1, 0.2] }}
+               transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+               className="w-2 h-2 bg-[#4ADE80] rounded-full"
+             />
+           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PricingOverlay({ onClose, onUpgrade }: { onClose: () => void, onUpgrade: (name: string) => void }) {
+  return (
+    <div className="fixed inset-0 z-[101] bg-[#0A0B0D]/95 backdrop-blur-2xl flex flex-col p-8 pt-20">
+      <button onClick={onClose} className="absolute top-8 right-8 w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-white/30">
+        <Plus className="rotate-45" />
+      </button>
+
+      <div className="mb-12 text-center">
+        <div className="inline-flex px-4 py-1.5 bg-[#FFB800]/10 border border-[#FFB800]/20 rounded-full mb-6 text-[#FFB800] text-[10px] font-black uppercase tracking-widest">
+          Acesso Restrito 🛡️
+        </div>
+        <h2 className="text-3xl font-black mb-4 leading-tight">O teu plano gratuito não permite isto!</h2>
+        <p className="text-white/40 text-sm font-medium leading-relaxed max-w-[280px] mx-auto">
+          Para receberes planos personalizados gerados por IA, precisas de atualizar para uma conta PRO.
+        </p>
+      </div>
+
+      <div className="flex-1 space-y-4 overflow-y-auto pb-12 no-scrollbar">
+        <PlanCard 
+          name="Premium Mensal"
+          price="5.000 Kz"
+          period="/ mês"
+          features={['Plano Alimentar IA', 'Chat Ilimitado', 'Análise de Fotos Pro', 'Dicas Exclusivas']}
+          onSelect={() => onUpgrade('Premium Mensal')}
+        />
+        <PlanCard 
+          name="Premium Trimestral"
+          price="12.000 Kz"
+          period="/ 3 meses"
+          highlight
+          features={['Tudo do Mensal', '25% de Desconto', 'Suporte Prioritário', 'Guia de Receitas PDF']}
+          onSelect={() => onUpgrade('Premium Trimestral')}
+        />
+        <PlanCard 
+          name="Elite Anual"
+          price="40.000 Kz"
+          period="/ ano"
+          features={['Plano Vitalício', 'Mentoria 1-on-1', 'Acesso Antecipado', 'Kit Boas Vindas']}
+          onSelect={() => onUpgrade('Elite Anual')}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PlanCard({ name, price, period, features, highlight, onSelect }: any) {
+  return (
+    <div className={`p-8 rounded-[40px] border-2 transition-all relative overflow-hidden group ${highlight ? 'bg-[#4ADE80] border-[#4ADE80] text-[#0A0B0D]' : 'bg-white/5 border-white/5 text-white'}`}>
+       {highlight && (
+         <div className="absolute top-4 right-4 bg-black/10 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Melhor Valor</div>
+       )}
+       <h3 className="text-sm font-black uppercase tracking-widest mb-2 opacity-60">{name}</h3>
+       <div className="flex items-baseline gap-1 mb-8">
+          <span className="text-3xl font-black">{price}</span>
+          <span className="text-[10px] font-bold opacity-40">{period}</span>
+       </div>
+       <div className="space-y-4 mb-10">
+          {features.map((f: string) => (
+            <div key={f} className="flex items-center gap-3">
+               <div className={`w-5 h-5 rounded-full flex items-center justify-center border ${highlight ? 'border-black/10 bg-black/5' : 'border-white/10 bg-white/5'}`}>
+                  <Plus size={12} className={highlight ? 'text-black' : 'text-[#4ADE80]'} />
+               </div>
+               <span className="text-xs font-bold opacity-80">{f}</span>
+            </div>
+          ))}
+       </div>
+       <button 
+        onClick={onSelect}
+        className={`w-full py-5 rounded-3xl font-black text-xs uppercase tracking-widest transition-all ${highlight ? 'bg-black text-white shadow-2xl' : 'bg-[#4ADE80] text-[#0A0B0D]'}`}
+       >
+         ATUALIZAR AGORA
+       </button>
     </div>
   );
 }
