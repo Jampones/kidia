@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { QUIZ_DATA } from '../constants/quizData';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Camera, 
@@ -184,13 +185,15 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
     if (data) setUserBadges(data);
   };
 
-  const startDailyQuiz = async () => {
+  const startDailyQuiz = () => {
     setShowQuiz(true);
     setCurrentQuizIndex(0);
     setQuizScore(0);
-    const { generateDailyQuiz } = await import('../services/geminiService.ts');
-    const questions = await generateDailyQuiz(userProfile);
-    setQuizQuestions(questions);
+    
+    // Pegar 3 perguntas aleatórias do nosso arquivo estático
+    const shuffled = [...QUIZ_DATA].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 3);
+    setQuizQuestions(selected);
   };
 
   const updateChallenge = (id: string) => {
