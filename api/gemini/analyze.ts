@@ -27,12 +27,11 @@ export default async function handler(req: Request) {
 
     const apiKey = getRotatingKey();
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "Chave de API não encontrada no ambiente." }), { status: 500 });
+      return new Response(JSON.stringify({ error: "Chave de API não encontrada." }), { status: 500 });
     }
 
     const ai = new (GoogleGenAI as any)(apiKey);
-    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-
+    
     const prompt = `Analise esta imagem de uma refeição ${mealType || ''} em um contexto angolano.
     Identifique os alimentos típicos e estime as calorias e macronutrientes.
     Responda EXCLUSIVAMENTE em JSON no formato:
@@ -47,22 +46,39 @@ export default async function handler(req: Request) {
     }
     Se o perfil indicar criança ou idoso, dê alertas de segurança nas dicas.`;
 
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: image,
-          mimeType: "image/jpeg"
-        }
-      }
-    ]);
+    let lastError = null;
+    const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash"];
 
-    let text = result.response.text();
-    text = text.replace(/```json|```/g, "").trim();
-    
-    return new Response(text, {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    for (const modelName of modelsToTry) {
+      try {
+        const model = ai.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              data: image,
+              mimeType: "image/jpeg"
+            }
+          }
+        ]);
+
+        let text = result.response.text();
+        text = text.replace(/```json|```/g, "").trim();
+        
+        return new Response(text, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      } catch (err: any) {
+        lastError = err;
+        console.error(`Falha na análise com ${modelName}:`, err.message);
+        if (err.message?.includes('503') || err.message?.includes('429')) {
+          continue;
+        }
+        break;
+      }
+    }
+
+    throw lastError;
   } catch (error: any) {
     console.error("Vercel Analysis Error:", error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });

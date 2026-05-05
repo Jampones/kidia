@@ -38,8 +38,7 @@ async function startServer() {
         return res.status(500).json({ error: "No API Key configured" });
       }
 
-      const ai = new (GoogleGenAI as any)({ apiKey });
-      
+      const ai = new (GoogleGenAI as any)(apiKey);
       const systemInstruction = `És o kidiaNutri, um assistente de nutrição angolano especialista em alimentação local (Angola). 
       Seu objetivo é ajudar os angolanos a comerem melhor usando alimentos da terra (Muamba, Funge, Kizaca, Múcua).
       ESTILO: Jovem, vibrante, motivador e muito focado na cultura de Angola.
@@ -47,18 +46,30 @@ async function startServer() {
       Não prescreva medicamentos, apenas oriente sobre escolhas alimentares.
       ${profile ? `ESTÁS A FALAR COM: ${profile.name || 'um usuário'}, ${profile.age || ''} anos, objetivo: ${profile.objective || ''}.` : ''}`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: history.map((m: any) => ({
-          role: m.role === 'user' ? 'user' : 'model',
-          parts: [{ text: m.text || m.parts?.[0]?.text || '' }]
-        })).concat([{ role: 'user', parts: [{ text: prompt }] }]),
-        config: {
-          systemInstruction,
-        },
-      });
+      let lastError = null;
+      const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash"];
 
-      res.json({ text: response.text });
+      for (const modelName of modelsToTry) {
+        try {
+          const model = ai.getGenerativeModel({ model: modelName });
+          const chat = model.startChat({
+            history: history.slice(-15).map((m: any) => ({
+              role: m.role === 'user' ? 'user' : 'model',
+              parts: [{ text: m.text || m.parts?.[0]?.text || '' }]
+            })),
+          });
+
+          const fullPrompt = `${systemInstruction}\n\nUsuário: ${prompt}`;
+          const result = await chat.sendMessage(fullPrompt);
+          res.json({ text: result.response.text() });
+          return;
+        } catch (err: any) {
+          lastError = err;
+          if (err.message?.includes('503') || err.message?.includes('429')) continue;
+          break;
+        }
+      }
+      throw lastError;
     } catch (error: any) {
       console.error("Server API Error:", error);
       res.status(500).json({ error: error.message });
@@ -74,8 +85,7 @@ async function startServer() {
         return res.status(500).json({ error: "No API Key configured" });
       }
 
-      const ai = new (GoogleGenAI as any)({ apiKey });
-
+      const ai = new (GoogleGenAI as any)(apiKey);
       const prompt = `Analise esta imagem de uma refeição ${mealType || ''} em um contexto angolano.
       Identifique os alimentos típicos e estime as calorias e macronutrientes.
       Responda EXCLUSIVAMENTE em JSON no formato:
@@ -90,25 +100,26 @@ async function startServer() {
       }
       Se o perfil indicar criança ou idoso, dê alertas de segurança nas dicas.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              {
-                inlineData: {
-                  data: image,
-                  mimeType: "image/jpeg"
-                }
-              }
-            ]
-          }
-        ]
-      });
+      let lastError = null;
+      const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash"];
 
-      const text = response.text.replace(/```json|```/g, "").trim();
-      res.json(JSON.parse(text));
+      for (const modelName of modelsToTry) {
+        try {
+          const model = ai.getGenerativeModel({ model: modelName });
+          const result = await model.generateContent([
+            prompt,
+            { inlineData: { data: image, mimeType: "image/jpeg" } }
+          ]);
+          const text = result.response.text().replace(/```json|```/g, "").trim();
+          res.json(JSON.parse(text));
+          return;
+        } catch (err: any) {
+          lastError = err;
+          if (err.message?.includes('503') || err.message?.includes('429')) continue;
+          break;
+        }
+      }
+      throw lastError;
     } catch (error: any) {
       console.error("Server Analysis Error:", error);
       res.status(500).json({ error: error.message });
