@@ -1,6 +1,6 @@
 {
   "name": "kidiaNutri",
-  "description": "AI-powered nutrition assistant with food recognition and nutritional analysis.",
+  "description": "Assistente de nutrição angolana com scanner AI, quiz diário de culinária e sistema de emblemas para gamificar a saúde.",
   "requestFramePermissions": ["camera"],
-  "majorCapabilities": ["AI Food Recognition", "Nutritional Chatbot", "Neon Minimalist UI"]
+  "majorCapabilities": ["AI Food Recognition", "Nutritional Chatbot", "Daily Nutrition Quiz", "Gamified Badges"]
 }

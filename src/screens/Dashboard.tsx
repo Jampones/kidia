@@ -28,6 +28,7 @@ import {
   AlertCircle,
   Type,
   Moon,
+  CheckCircle2,
   Globe,
   Share2,
   Star,
@@ -79,6 +80,17 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [scanHistory, setScanHistory] = useState<any[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
+  const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
+  const [quizScore, setQuizScore] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [userBadges, setUserBadges] = useState<any[]>([]);
+  const [activeChallenges, setActiveChallenges] = useState<any[]>([
+    { id: 'water', title: 'Beber Água', target: 8, current: 0, icon: <Droplets />, color: '#00D1FF' },
+    { id: 'nosugar', title: 'Sem Açúcar', target: 1, current: 0, icon: <Apple />, color: '#FF4F4F' }
+  ]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -109,6 +121,35 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
   const loadScanHistory = async () => {
     const { data } = await getClient().from('scan_history').select('*').eq('user_id', session.id).order('created_at', { ascending: false });
     if (data) setScanHistory(data);
+  };
+
+  const loadUserBadges = async () => {
+    const { data } = await getClient().from('user_badges').select('*').eq('user_id', session.id);
+    if (data) setUserBadges(data);
+  };
+
+  const startDailyQuiz = async () => {
+    setShowQuiz(true);
+    setCurrentQuizIndex(0);
+    setQuizScore(0);
+    const { generateDailyQuiz } = await import('../services/geminiService.ts');
+    const questions = await generateDailyQuiz(userProfile);
+    setQuizQuestions(questions);
+  };
+
+  const updateChallenge = (id: string) => {
+    setActiveChallenges(prev => prev.map(c => {
+      if (c.id === id) {
+        const next = c.current + 1;
+        if (next >= c.target) {
+          setShowSuccessToast(`Desafio ${c.title} Concluído!`);
+          setTimeout(() => setShowSuccessToast(null), 3000);
+          return { ...c, current: c.target };
+        }
+        return { ...c, current: next };
+      }
+      return c;
+    }));
   };
 
   const handleSendMessage = async () => {
@@ -479,6 +520,31 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
                 </div>
               </div>
 
+              {/* Daily Quiz Section */}
+              <div className="p-6 rounded-[32px] bg-gradient-to-br from-[#4ADE80]/10 to-[#00D1FF]/10 border border-[#4ADE80]/20 relative overflow-hidden group">
+                <div className="relative z-10 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-[#4ADE80]/20 rounded-xl">
+                      <Star size={20} className="text-[#4ADE80]" fill="#4ADE80" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-sm uppercase tracking-widest">Quiz do Dia</h3>
+                      <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">+50 Pontos Neon</p>
+                    </div>
+                  </div>
+                  <p className="text-white/60 text-xs font-medium leading-relaxed">
+                    Testa os teus conhecimentos sobre a nossa culinária e ganha emblemas exclusivos!
+                  </p>
+                  <button 
+                    onClick={startDailyQuiz}
+                    className="w-full py-4 bg-[#4ADE80] text-[#0A0B0D] font-black rounded-2xl text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-[#4ADE80]/20"
+                  >
+                    Começar Quiz Agora
+                  </button>
+                </div>
+                <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#4ADE80]/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
+              </div>
+
               {/* Habit Challenges Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between px-1">
@@ -486,21 +552,33 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
                   <button className="text-[#4ADE80] text-[10px] font-black uppercase tracking-widest">Ver todos</button>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <ChallengeThumbCard 
-                    icon={<div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">🚭</div>}
-                    title="7 dias"
-                    status="Em progresso"
-                    color="#FF4F4F"
-                    active
-                  />
-                  <ChallengeThumbCard 
-                    icon={<div className="w-10 h-10 rounded-full bg-[#00D1FF]/10 flex items-center justify-center text-[#00D1FF]"><Droplets size={20} /></div>}
-                    title="14 dias"
-                    status="Participar"
-                    color="#00D1FF"
-                  />
+                  {activeChallenges.map(challenge => (
+                    <ChallengeThumbCard 
+                      key={challenge.id}
+                      icon={challenge.icon}
+                      title={challenge.title}
+                      status={challenge.current >= challenge.target ? "Concluído" : `${challenge.current}/${challenge.target}`}
+                      color={challenge.color}
+                      active={challenge.current > 0}
+                      progress={(challenge.current / challenge.target) * 100}
+                      onClick={() => updateChallenge(challenge.id)}
+                    />
+                  ))}
                 </div>
               </div>
+
+              {/* Emblems Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-lg font-black tracking-tight">Meus Emblemas</h3>
+                </div>
+                <div className="space-y-3">
+                   <BadgeRow icon={<Zap size={20} />} title="Explorador Neon" date="01/05" color="#4ADE80" />
+                   <BadgeRow icon={<Target size={20} />} title="Foco Absoluto" date="02/05" color="#FF4F4F" />
+                </div>
+              </div>
+
+              {/* Recent Analysis Section */}
 
               {/* Recent Analysis Section */}
               <div className="space-y-4 pb-12">
@@ -937,6 +1015,137 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
           />
         )}
 
+        {showQuiz && (
+          <Overlay title="Quiz do Dia" onClose={() => { setShowQuiz(false); setSelectedAnswer(null); setShowExplanation(false); }}>
+            <div className="bg-[#0A0B0D] min-h-full p-8">
+                {quizQuestions.length > 0 ? (
+                  currentQuizIndex < quizQuestions.length ? (
+                    <div className="space-y-8 max-w-sm mx-auto">
+                       <div className="space-y-3">
+                          <div className="flex gap-1.5 mb-6">
+                            {[0, 1, 2].map(i => (
+                              <div key={i} className={`h-1.5 flex-1 rounded-full ${i < currentQuizIndex ? 'bg-[#4ADE80]' : (i === currentQuizIndex ? 'bg-[#4ADE80]/30 animate-pulse' : 'bg-white/5')}`} />
+                            ))}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#4ADE80]">Pergunta {currentQuizIndex + 1}</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">{quizScore} ACERTOS</span>
+                          </div>
+                          <h2 className="text-xl font-black leading-tight text-white">{quizQuestions[currentQuizIndex].question}</h2>
+                       </div>
+
+                       <div className="grid grid-cols-1 gap-3">
+                          {quizQuestions[currentQuizIndex].options.map((option: string, idx: number) => {
+                            const isSelected = selectedAnswer === idx;
+                            const isCorrect = idx === quizQuestions[currentQuizIndex].correctIndex;
+                            const showResult = selectedAnswer !== null;
+                            
+                            let borderColor = 'border-white/10';
+                            let bgColor = 'bg-white/5';
+                            let iconColor = 'bg-white/5 text-white/40';
+
+                            if (showResult) {
+                              if (isCorrect) {
+                                borderColor = 'border-[#4ADE80] scale-[1.02]';
+                                bgColor = 'bg-[#4ADE80]/10';
+                                iconColor = 'bg-[#4ADE80] text-[#0A0B0D]';
+                              } else if (isSelected) {
+                                borderColor = 'border-[#FF4F4F]';
+                                bgColor = 'bg-[#FF4F4F]/10';
+                                iconColor = 'bg-[#FF4F4F] text-white';
+                              }
+                            }
+
+                            return (
+                              <button 
+                                key={idx}
+                                disabled={showResult}
+                                onClick={() => {
+                                  setSelectedAnswer(idx);
+                                  if (idx === quizQuestions[currentQuizIndex].correctIndex) {
+                                    setQuizScore(prev => prev + 1);
+                                  }
+                                  setShowExplanation(true);
+                                }}
+                                className={`w-full p-5 sm:p-6 border rounded-[28px] text-left transition-all group relative overflow-hidden ${borderColor} ${bgColor}`}
+                              >
+                                 <div className="flex items-center gap-4 relative z-10">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xs transition-colors shrink-0 ${iconColor}`}>
+                                      {String.fromCharCode(65 + idx)}
+                                    </div>
+                                    <span className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-white/80'}`}>{option}</span>
+                                 </div>
+                                 {showResult && isCorrect && (
+                                   <div className="absolute right-6 top-1/2 -translate-y-1/2">
+                                     <CheckCircle2 size={20} className="text-[#4ADE80]" />
+                                   </div>
+                                 )}
+                              </button>
+                            );
+                          })}
+                       </div>
+
+                       {showExplanation && (
+                         <motion.div 
+                           initial={{ opacity: 0, y: 10 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           className="p-6 bg-[#4ADE10]/5 border border-[#4ADE10]/20 rounded-[32px] space-y-3"
+                         >
+                           <div className="flex items-center gap-2 text-[#4ADE80]">
+                             <Zap size={16} strokeWidth={3} />
+                             <span className="font-black text-[10px] uppercase tracking-widest">Explicação Kidia</span>
+                           </div>
+                           <p className="text-white/70 text-xs leading-relaxed font-medium">
+                             {quizQuestions[currentQuizIndex].explanation}
+                           </p>
+                           <button 
+                             onClick={() => {
+                               setSelectedAnswer(null);
+                               setShowExplanation(false);
+                               setCurrentQuizIndex(prev => prev + 1);
+                             }}
+                             className="w-full py-4 mt-2 bg-white text-black font-black rounded-2xl text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+                           >
+                             Próxima Pergunta
+                           </button>
+                         </motion.div>
+                       )}
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-8 py-10 max-w-sm mx-auto">
+                       <div className="w-32 h-32 bg-[#4ADE80]/20 rounded-full mx-auto flex items-center justify-center relative">
+                          <div className="absolute inset-0 bg-[#4ADE80]/20 rounded-full animate-ping" />
+                          <Flame size={64} className="text-[#4ADE80]" fill="#4ADE80" />
+                       </div>
+                       <div className="space-y-2">
+                          <h2 className="text-3xl font-black text-white">Excelente!</h2>
+                          <p className="text-white/40 text-sm font-medium">Completaste o Quiz do Kidia.</p>
+                          <div className="text-[#4ADE80] text-xl font-black mt-4">{quizScore}/3 ACERTOS</div>
+                       </div>
+                       <button 
+                         onClick={() => {
+                           setShowQuiz(false);
+                           setSelectedAnswer(null);
+                           setShowExplanation(false);
+                           setShowSuccessToast("Emblema Desbloqueado!");
+                           setTimeout(() => setShowSuccessToast(null), 3000);
+                         }}
+                         className="w-full py-5 bg-[#4ADE80] text-[#0A0B0D] font-black rounded-[28px] text-xs uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-[#4ADE80]/20"
+                       >
+                         Coletar Emblema & Voltar
+                       </button>
+                    </div>
+                  )
+                ) : (
+                  <div className="py-20 flex flex-col items-center justify-center gap-6 h-full">
+                    <Loader2 className="animate-spin text-[#4ADE80]" size={40} />
+                    <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse text-center px-8">Consultando a nossa base de dados angolana...</p>
+                  </div>
+                )}
+            </div>
+          </Overlay>
+        )}
+
         {showSuccessToast && (
           <motion.div 
             initial={{ y: 50, opacity: 0 }} 
@@ -1290,17 +1499,37 @@ function MealThumbCard({ image, time, label, name, kcal, active, onClick }: { im
   );
 }
 
-function ChallengeThumbCard({ icon, title, status, color, active }: { icon: any, title: string, status: string, color: string, active?: boolean }) {
+interface ChallengeProps {
+  icon: any;
+  title: string;
+  status: string;
+  color: string;
+  active?: boolean;
+  onClick?: () => void;
+  progress?: number;
+  key?: any;
+}
+
+function ChallengeThumbCard({ icon, title, status, color, active, onClick, progress }: ChallengeProps) {
   return (
-    <div className="p-6 bg-[#121417] border border-white/5 rounded-[32px] relative overflow-hidden group" style={{ borderColor: active ? `${color}40` : '' }}>
+    <div 
+      onClick={onClick}
+      className={`p-6 bg-[#121417] border rounded-[32px] relative overflow-hidden group cursor-pointer transition-all active:scale-95 ${active ? 'shadow-xl' : ''}`} 
+      style={{ borderColor: active ? `${color}40` : 'rgba(255,255,255,0.05)', backgroundColor: active ? `${color}05` : '' }}
+    >
        <div className="flex flex-col items-center gap-3 relative z-10">
           {icon}
-          <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">{title}</span>
+          <div className="text-center">
+            <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] block mb-1">{title}</span>
+            {progress !== undefined && (
+              <div className="text-[9px] font-black text-white/60 mb-2">{progress}% Concluído</div>
+            )}
+          </div>
           <button 
             className="w-full py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all"
             style={{ 
-              backgroundColor: active ? `${color}20` : 'transparent', 
-              color: color,
+              backgroundColor: active ? color : 'transparent', 
+              color: active ? '#000' : color,
               border: `1.5px solid ${active ? 'transparent' : `${color}40`}`
             }}
           >
@@ -1308,6 +1537,28 @@ function ChallengeThumbCard({ icon, title, status, color, active }: { icon: any,
           </button>
        </div>
        <div className="absolute -bottom-4 -right-4 w-16 h-16 rounded-full blur-3xl opacity-10 group-hover:opacity-30 transition-opacity" style={{ backgroundColor: color }} />
+       {progress !== undefined && (
+         <div className="absolute bottom-0 left-0 h-1 bg-white/5 w-full">
+           <div className="h-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: color }} />
+         </div>
+       )}
+    </div>
+  );
+}
+
+function BadgeRow({ icon, title, date, color }: any) {
+  return (
+    <div className="flex items-center gap-4 p-4 bg-white/5 border border-white/5 rounded-3xl group">
+      <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: `${color}20`, color: color }}>
+        {icon}
+      </div>
+      <div>
+        <h4 className="font-black text-xs uppercase tracking-widest text-white/80">{title}</h4>
+        <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Desbloqueado em {date}</p>
+      </div>
+      <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+        <Star size={16} className="text-[#FFB800]" fill="#FFB800" />
+      </div>
     </div>
   );
 }
