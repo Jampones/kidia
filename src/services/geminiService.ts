@@ -59,7 +59,7 @@ export async function askNutritionAssistant(prompt: string, history: { role: 'us
   try {
     const ai = getAIInstance();
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: [...history, { role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction: getSystemInstruction(profile),
@@ -117,7 +117,7 @@ DIRETRIZES DE SEGURANÇA E PERSONALIZAÇÃO:
     Responda em Português de Angola.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: { parts: [imagePart, { text: contextPrompt }] },
       config: {
         responseMimeType: "application/json",
