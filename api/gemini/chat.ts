@@ -22,15 +22,16 @@ export default async function handler(req: Request) {
 
       if (keys.length === 0) return "";
       const selected = keys[Math.floor(Math.random() * keys.length)];
-      return selected?.trim().replace(/[^\x00-\x7F]/g, "") || "";
+      // Limpeza rigorosa para evitar erros de ISO-8859-1 e chaves inválidas
+      return selected?.toString().trim().replace(/[^\x20-\x7E]/g, "") || "";
     };
 
     const apiKey = getRotatingKey();
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "No API Key configured" }), { status: 500 });
+      return new Response(JSON.stringify({ error: "Nenhuma chave de API configurada no ambiente." }), { status: 500 });
     }
 
-    const ai = new (GoogleGenAI as any)({ apiKey });
+    const ai = new (GoogleGenAI as any)(apiKey);
 
     const systemInstruction = `És o kidiaNutri, um assistente de nutrição angolano especialista em alimentação local (Angola). 
     Seu objetivo é ajudar os angolanos a comerem melhor usando alimentos da terra (Muamba, Funge, Kizaca, Múcua).
@@ -39,18 +40,20 @@ export default async function handler(req: Request) {
     Não prescreva medicamentos, apenas oriente sobre escolhas alimentares.
     ${profile ? `ESTÁS A FALAR COM: ${profile.name || 'um usuário'}, ${profile.age || ''} anos, objetivo: ${profile.objective || ''}.` : ''}`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: history.slice(-20).map((m: any) => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.text || m.parts?.[0]?.text || '' }]
-      })).concat([{ role: 'user', parts: [{ text: prompt }] }]),
-      config: {
-        systemInstruction,
-      },
+    const model = ai.getGenerativeModel({ 
+      model: "gemini-1.5-flash",
     });
 
-    const text = response.text;
+    const chat = model.startChat({
+      history: history.slice(-20).map((m: any) => ({
+        role: m.role === 'user' ? 'user' : 'model',
+        parts: [{ text: m.text || m.parts?.[0]?.text || '' }]
+      })),
+    });
+
+    const fullPrompt = `${systemInstruction}\n\nUsuário: ${prompt}`;
+    const result = await chat.sendMessage(fullPrompt);
+    const text = result.response.text();
     
     return new Response(JSON.stringify({ text }), {
       headers: { 'Content-Type': 'application/json' },

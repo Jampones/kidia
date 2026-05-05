@@ -22,15 +22,16 @@ export default async function handler(req: Request) {
 
       if (keys.length === 0) return "";
       const selected = keys[Math.floor(Math.random() * keys.length)];
-      return selected?.trim().replace(/[^\x00-\x7F]/g, "") || "";
+      return selected?.toString().trim().replace(/[^\x20-\x7E]/g, "") || "";
     };
 
     const apiKey = getRotatingKey();
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "No API Key configured" }), { status: 500 });
+      return new Response(JSON.stringify({ error: "Chave de API não encontrada no ambiente." }), { status: 500 });
     }
 
-    const ai = new (GoogleGenAI as any)({ apiKey });
+    const ai = new (GoogleGenAI as any)(apiKey);
+    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `Analise esta imagem de uma refeição ${mealType || ''} em um contexto angolano.
     Identifique os alimentos típicos e estime as calorias e macronutrientes.
@@ -46,24 +47,17 @@ export default async function handler(req: Request) {
     }
     Se o perfil indicar criança ou idoso, dê alertas de segurança nas dicas.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        {
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                data: image,
-                mimeType: "image/jpeg"
-              }
-            }
-          ]
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          data: image,
+          mimeType: "image/jpeg"
         }
-      ]
-    });
+      }
+    ]);
 
-    let text = response.text;
+    let text = result.response.text();
     text = text.replace(/```json|```/g, "").trim();
     
     return new Response(text, {
