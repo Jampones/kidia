@@ -30,10 +30,7 @@ export default async function handler(req: Request) {
       return new Response(JSON.stringify({ error: "No API Key configured" }), { status: 500 });
     }
 
-    const genAI = new (GoogleGenAI as any)(apiKey);
-    const model = (genAI as any).getGenerativeModel({ 
-      model: "gemini-1.5-flash",
-    });
+    const ai = new (GoogleGenAI as any)({ apiKey });
 
     const systemInstruction = `És o kidiaNutri, um assistente de nutrição angolano especialista em alimentação local (Angola). 
     Seu objetivo é ajudar os angolanos a comerem melhor usando alimentos da terra (Muamba, Funge, Kizaca, Múcua).
@@ -42,16 +39,18 @@ export default async function handler(req: Request) {
     Não prescreva medicamentos, apenas oriente sobre escolhas alimentares.
     ${profile ? `ESTÁS A FALAR COM: ${profile.name || 'um usuário'}, ${profile.age || ''} anos, objetivo: ${profile.objective || ''}.` : ''}`;
 
-    const chat = model.startChat({
-      history: history.slice(-20).map((m: any) => ({
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: history.slice(-20).map((m: any) => ({
         role: m.role === 'user' ? 'user' : 'model',
         parts: [{ text: m.text || m.parts?.[0]?.text || '' }]
-      })),
+      })).concat([{ role: 'user', parts: [{ text: prompt }] }]),
+      config: {
+        systemInstruction,
+      },
     });
 
-    const fullPrompt = `${systemInstruction}\n\nUsuário: ${prompt}`;
-    const result = await chat.sendMessage(fullPrompt);
-    const text = result.response.text();
+    const text = response.text;
     
     return new Response(JSON.stringify({ text }), {
       headers: { 'Content-Type': 'application/json' },

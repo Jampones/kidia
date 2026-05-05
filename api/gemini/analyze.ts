@@ -30,8 +30,7 @@ export default async function handler(req: Request) {
       return new Response(JSON.stringify({ error: "No API Key configured" }), { status: 500 });
     }
 
-    const genAI = new (GoogleGenAI as any)(apiKey);
-    const model = (genAI as any).getGenerativeModel({ model: "gemini-1.5-flash" });
+    const ai = new (GoogleGenAI as any)({ apiKey });
 
     const prompt = `Analise esta imagem de uma refeição ${mealType || ''} em um contexto angolano.
     Identifique os alimentos típicos e estime as calorias e macronutrientes.
@@ -47,17 +46,24 @@ export default async function handler(req: Request) {
     }
     Se o perfil indicar criança ou idoso, dê alertas de segurança nas dicas.`;
 
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: image,
-          mimeType: "image/jpeg"
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
+        {
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                data: image,
+                mimeType: "image/jpeg"
+              }
+            }
+          ]
         }
-      }
-    ]);
+      ]
+    });
 
-    let text = result.response.text();
+    let text = response.text;
     text = text.replace(/```json|```/g, "").trim();
     
     return new Response(text, {

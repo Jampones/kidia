@@ -38,9 +38,8 @@ async function startServer() {
         return res.status(500).json({ error: "No API Key configured" });
       }
 
-      const genAI = new (GoogleGenAI as any)(apiKey);
-      const model = (genAI as any).getGenerativeModel({ model: "gemini-1.5-flash" });
-
+      const ai = new (GoogleGenAI as any)({ apiKey });
+      
       const systemInstruction = `És o kidiaNutri, um assistente de nutrição angolano especialista em alimentação local (Angola). 
       Seu objetivo é ajudar os angolanos a comerem melhor usando alimentos da terra (Muamba, Funge, Kizaca, Múcua).
       ESTILO: Jovem, vibrante, motivador e muito focado na cultura de Angola.
@@ -48,22 +47,18 @@ async function startServer() {
       Não prescreva medicamentos, apenas oriente sobre escolhas alimentares.
       ${profile ? `ESTÁS A FALAR COM: ${profile.name || 'um usuário'}, ${profile.age || ''} anos, objetivo: ${profile.objective || ''}.` : ''}`;
 
-      const chat = model.startChat({
-        history: history.map((m: any) => ({
-          role: m.role,
-          parts: m.parts || [{ text: m.text }]
-        })),
-        generationConfig: {
-          maxOutputTokens: 1000,
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: history.map((m: any) => ({
+          role: m.role === 'user' ? 'user' : 'model',
+          parts: [{ text: m.text || m.parts?.[0]?.text || '' }]
+        })).concat([{ role: 'user', parts: [{ text: prompt }] }]),
+        config: {
+          systemInstruction,
         },
       });
 
-      // Simple implementation without full systemInstruction if the SDK version is older, 
-      // but current @google/genai supports it in getGenerativeModel or as part of prompt
-      const result = await chat.sendMessage(prompt);
-      const text = result.response.text();
-      
-      res.json({ text });
+      res.json({ text: response.text });
     } catch (error: any) {
       console.error("Server API Error:", error);
       res.status(500).json({ error: error.message });
@@ -79,8 +74,7 @@ async function startServer() {
         return res.status(500).json({ error: "No API Key configured" });
       }
 
-      const genAI = new (GoogleGenAI as any)(apiKey);
-      const model = (genAI as any).getGenerativeModel({ model: "gemini-1.5-flash" });
+      const ai = new (GoogleGenAI as any)({ apiKey });
 
       const prompt = `Analise esta imagem de uma refeição ${mealType || ''} em um contexto angolano.
       Identifique os alimentos típicos e estime as calorias e macronutrientes.
@@ -96,17 +90,24 @@ async function startServer() {
       }
       Se o perfil indicar criança ou idoso, dê alertas de segurança nas dicas.`;
 
-      const result = await model.generateContent([
-        prompt,
-        {
-          inlineData: {
-            data: image,
-            mimeType: "image/jpeg"
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  data: image,
+                  mimeType: "image/jpeg"
+                }
+              }
+            ]
           }
-        }
-      ]);
+        ]
+      });
 
-      const text = result.response.text().replace(/```json|```/g, "").trim();
+      const text = response.text.replace(/```json|```/g, "").trim();
       res.json(JSON.parse(text));
     } catch (error: any) {
       console.error("Server Analysis Error:", error);
