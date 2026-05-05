@@ -7,11 +7,34 @@
   --color-primary: #4ADE80; /* Brighter green from prototype button */
   --color-dark-bg: #0A0A0A; /* Deeper black */
   --color-card-bg: #121212;
+  
+  /* Theme variables mapped to tailwind names */
+  --color-app-bg: var(--app-bg);
+  --color-card-custom: var(--card-bg);
+  --color-text-main: var(--text-main);
+  --color-text-muted: var(--text-muted);
+  --color-border-custom: var(--border-color);
+}
+
+:root {
+  --app-bg: #0A0B0D;
+  --card-bg: #121417;
+  --text-main: #FFFFFF;
+  --text-muted: rgba(255, 255, 255, 0.4);
+  --border-color: rgba(255, 255, 255, 0.05);
+}
+
+.light {
+  --app-bg: #F9FAFB;
+  --card-bg: #FFFFFF;
+  --text-main: #111827;
+  --text-muted: #6B7280;
+  --border-color: #E5E7EB;
 }
 
 @layer base {
   body {
-    @apply bg-dark-bg text-white font-sans antialiased;
+    @apply bg-app-bg text-text-main font-sans antialiased transition-colors duration-300;
   }
 }
 

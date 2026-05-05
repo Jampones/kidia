@@ -154,7 +154,7 @@ export default function App() {
 
   // Router Logic
   return (
-    <div className="min-h-screen flex flex-col max-w-lg mx-auto border-x border-white/5 bg-[#0A0B0D] shadow-2xl relative font-sans">
+    <div className="min-h-screen flex flex-col max-w-lg mx-auto border-x border-border-custom bg-app-bg text-text-main shadow-2xl relative font-sans transition-colors duration-300">
       {session ? (
         <Dashboard session={session} onLogout={logout} />
       ) : (

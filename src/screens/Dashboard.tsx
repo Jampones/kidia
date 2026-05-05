@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Camera, 
@@ -75,13 +75,38 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisTimer, setAnalysisTimer] = useState(0);
+  const [dailyLimitReached, setDailyLimitReached] = useState(false);
+  const [hoursToReset, setHoursToReset] = useState(0);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [activeMealType, setActiveMealType] = useState<string | null>(null);
   const [scannerResult, setScannerResult] = useState<AnalysisResult | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const currentDateStr = useMemo(() => {
+    const d = new Date();
+    const weekday = d.toLocaleDateString('pt-PT', { weekday: 'long' });
+    const day = d.toLocaleDateString('pt-PT', { day: '2-digit' });
+    const month = d.toLocaleDateString('pt-PT', { month: 'long' });
+    
+    const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+    
+    return `${capitalize(weekday)}, ${day} de ${capitalize(month)}`;
+  }, []);
+
   const [scanHistory, setScanHistory] = useState<any[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showQuiz, setShowQuiz] = useState(false);
   const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+  }, [theme]);
   const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
   const [quizScore, setQuizScore] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -103,6 +128,37 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
   }, []);
 
   const getClient = () => getSupabase();
+
+  useEffect(() => {
+    let timer: any;
+    if (analysisTimer > 0) {
+      timer = setInterval(() => {
+        setAnalysisTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [analysisTimer]);
+
+  const checkDailyLimit = () => {
+    if (session.email === 'admin@gmail.com') return true;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const scansToday = scanHistory.filter(scan => {
+      const scanDate = scan.date || (scan.created_at ? scan.created_at.split('T')[0] : null);
+      return scanDate === today;
+    }).length;
+    
+    if (scansToday >= 2) {
+      setDailyLimitReached(true);
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setHours(24, 0, 0, 0);
+      const diff = Math.ceil((tomorrow.getTime() - now.getTime()) / (1000 * 60 * 60));
+      setHoursToReset(diff);
+      return false;
+    }
+    return true;
+  };
 
   const loadUserProfile = async () => {
     const { data } = await getClient()
@@ -167,15 +223,23 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => { setPreviewUrl(reader.result as string); };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (!checkDailyLimit()) return;
+    if (analysisTimer > 0) {
+      setShowSuccessToast(`Aguarde ${analysisTimer}s para nova análise`);
+      setTimeout(() => setShowSuccessToast(null), 3000);
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onloadend = () => { setPreviewUrl(reader.result as string); };
+    reader.readAsDataURL(file);
   };
 
   const confirmScan = (mealType?: string) => {
     if (previewUrl) {
+      setActiveMealType(mealType || null);
       processImage(previewUrl, mealType);
     }
   };
@@ -184,12 +248,28 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
     setIsAnalyzing(true); 
     setScannerResult(null);
     setAnalysisError(null);
+    setAnalysisTimer(30);
+
     try {
       const result = await analyzeFoodImage(base64, userProfile, mealType);
       if (!result || !result.name) {
         throw new Error("Não foi possível identificar o prato.");
       }
       setScannerResult(result);
+      
+      // Save scan history immediately if successful
+      const { data: scanData } = await getClient().from('scan_history').insert({
+        user_id: session.id,
+        item_name: result.name,
+        calories: parseFloat(result.calories),
+        protein: parseFloat(result.protein),
+        carbs: parseFloat(result.carbs),
+        fat: parseFloat(result.fat),
+        health_tip: result.healthTip,
+        date: new Date().toISOString().split('T')[0]
+      }).select();
+
+      if (scanData) setScanHistory(prev => [scanData[0], ...prev]);
     } catch (error: any) { 
       console.error(error); 
       setAnalysisError(error.message || "Erro na análise. Tente novamente.");
@@ -350,7 +430,7 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#0A0B0D] text-white">
+    <div className="flex-1 flex flex-col h-full bg-app-bg text-text-main transition-colors duration-300">
       {/* Header */}
       {(activeTab === 'home' || activeTab === 'plan') && (
         <header className="px-6 pt-8 pb-4 flex items-center justify-between">
@@ -359,7 +439,7 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
               {activeTab === 'home' ? `Olá, ${userProfile?.name?.split(' ')[0] || 'Convidado'} 👋` : 'Plano alimentar'}
             </h1>
             <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mt-1">
-              {activeTab === 'home' ? 'Sábado, 02 De Maio' : 'Alimentação equilibrada - 2000 kcal/dia'}
+              {activeTab === 'home' ? currentDateStr : 'Alimentação equilibrada - 2000 kcal/dia'}
             </p>
           </div>
           {activeTab === 'home' ? (
@@ -814,7 +894,12 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
                   <div className="bg-[#121417] border border-white/5 rounded-[32px] overflow-hidden">
                     <SettingItem icon={<Bell size={18} />} label="Notificações de Refeição" value="Ativo" />
                     <SettingItem icon={<Type size={18} />} label="Modo Acessibilidade" value="Letras Médias" />
-                    <SettingItem icon={<Moon size={18} />} label="Tema" value="Escuro" />
+                    <SettingItem 
+                      icon={theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />} 
+                      label="Tema" 
+                      value={theme === 'dark' ? 'Escuro' : 'Claro'} 
+                      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    />
                     <SettingItem icon={<Globe size={18} />} label="Idioma" value="Português (AO)" />
                     <SettingItem icon={<Share2 size={18} />} label="Partilhar App" onClick={() => {}} />
                     <SettingItem icon={<Star size={18} />} label="Avaliar na Loja" last onClick={() => {}} />
@@ -835,7 +920,7 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
       </main>
 
       {/* Bottom Navigation */}
-      <footer className="fixed bottom-0 left-0 right-0 px-6 pb-8 pt-4 bg-[#0A0B0D]/90 backdrop-blur-xl border-t border-white/[0.03] z-[60]">
+      <footer className="fixed bottom-0 left-0 right-0 px-6 pb-8 pt-4 bg-app-bg/90 backdrop-blur-xl border-t border-border-custom z-[60]">
         <div className="flex items-center justify-between">
           <NavButton active={activeTab === 'home'} icon={<HomeIcon active={activeTab === 'home'} />} label="Início" onClick={() => setActiveTab('home')} />
           <NavButton active={activeTab === 'plan'} icon={<Calendar size={22} />} label="Plano" onClick={() => setActiveTab('plan')} />
@@ -846,7 +931,7 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
               onClick={() => setShowScanner(true)}
               className="w-16 h-16 bg-[#4ADE80] rounded-full flex items-center justify-center shadow-2xl shadow-[#4ADE80]/30 hover:scale-110 active:scale-95 transition-all"
             >
-              <Camera className="text-[#0A0B0D]" size={30} strokeWidth={2.5} />
+              <Camera className="text-app-bg" size={30} strokeWidth={2.5} />
             </button>
           </div>
           
@@ -869,6 +954,10 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
                 onAddToDiary={addMealToDiary}
                 onClose={() => { setShowScanner(false); setPreviewUrl(null); setScannerResult(null); setAnalysisError(null); }}
                 fileInputRef={fileInputRef}
+                dailyLimitReached={dailyLimitReached}
+                hoursToReset={hoursToReset}
+                analysisTimer={analysisTimer}
+                onUpgrade={() => handleUpgrade('Premium')}
              />
           </Overlay>
         )}
@@ -1323,7 +1412,7 @@ function PlanCard({ name, price, period, features, highlight, onSelect }: any) {
 
 function HomeIcon({ active }: { active: boolean }) {
   return (
-    <div className={`relative ${active ? 'text-[#4ADE80]' : 'text-white/20'}`}>
+    <div className={`relative ${active ? 'text-[#4ADE80]' : 'text-text-muted'}`}>
       <Activity size={22} />
       {active && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-[#4ADE80] rounded-full" />}
     </div>
@@ -1332,7 +1421,7 @@ function HomeIcon({ active }: { active: boolean }) {
 
 function MealCard({ icon, label, time, kcal, isOpen, onToggle, details }: { icon: any, label: string, time: string, kcal: string, isOpen: boolean, onToggle: () => void, details?: any }) {
   return (
-    <div className={`bg-[#121417] border border-white/5 rounded-[32px] overflow-hidden transition-all duration-300 ${isOpen ? 'shadow-2xl' : 'shadow-sm'}`}>
+    <div className={`bg-card-custom border border-border-custom rounded-[32px] overflow-hidden transition-all duration-300 ${isOpen ? 'shadow-2xl' : 'shadow-sm'}`}>
       <button onClick={onToggle} className="w-full p-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isOpen ? 'bg-[#FFB800]/20 text-[#FFB800]' : 'bg-white/5 text-white/20'}`}>
@@ -1548,13 +1637,13 @@ function ChallengeThumbCard({ icon, title, status, color, active, onClick, progr
 
 function BadgeRow({ icon, title, date, color }: any) {
   return (
-    <div className="flex items-center gap-4 p-4 bg-white/5 border border-white/5 rounded-3xl group">
+    <div className="flex items-center gap-4 p-4 bg-card-custom border border-border-custom rounded-3xl group">
       <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: `${color}20`, color: color }}>
         {icon}
       </div>
       <div>
-        <h4 className="font-black text-xs uppercase tracking-widest text-white/80">{title}</h4>
-        <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Desbloqueado em {date}</p>
+        <h4 className="font-black text-xs uppercase tracking-widest text-text-main/80">{title}</h4>
+        <p className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Desbloqueado em {date}</p>
       </div>
       <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
         <Star size={16} className="text-[#FFB800]" fill="#FFB800" />
@@ -1585,22 +1674,22 @@ function AnalysisRow({ image, name, info, date, score, onClick }: { image: strin
 function NavButton({ active, icon, label, onClick }: { active: boolean, icon: any, label: string, onClick: () => void }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-1">
-      <div className={`${active ? 'text-[#4ADE80]' : 'text-white/20'} transition-all`}>{icon}</div>
-      <span className={`text-[8px] font-black uppercase tracking-widest ${active ? 'text-[#4ADE80]' : 'text-white/20'}`}>{label}</span>
+      <div className={`${active ? 'text-[#4ADE80]' : 'text-text-muted'} transition-all`}>{icon}</div>
+      <span className={`text-[8px] font-black uppercase tracking-widest ${active ? 'text-[#4ADE80]' : 'text-text-muted'}`}>{label}</span>
     </button>
   );
 }
 
 function SettingItem({ icon, label, value, last, onClick }: { icon: any, label: string, value?: string, last?: boolean, onClick?: () => void }) {
   return (
-    <button onClick={onClick} className={`w-full p-5 flex items-center justify-between group transition-colors hover:bg-white/[0.02] ${!last ? 'border-b border-white/[0.03]' : ''}`}>
+    <button onClick={onClick} className={`w-full p-5 flex items-center justify-between group transition-colors hover:bg-white/[0.02] ${!last ? 'border-b border-border-custom' : ''}`}>
       <div className="flex items-center gap-4">
-        <div className="text-white/30 group-hover:text-[#4ADE80] transition-colors">{icon}</div>
-        <span className="text-sm font-bold text-white/80">{label}</span>
+        <div className="text-text-muted group-hover:text-[#4ADE80] transition-colors">{icon}</div>
+        <span className="text-sm font-bold text-text-main/80">{label}</span>
       </div>
       <div className="flex items-center gap-2">
-        {value && <span className="text-[10px] font-black uppercase tracking-widest text-white/20 group-hover:text-[#4ADE80] transition-colors">{value}</span>}
-        <ChevronRight size={14} className="text-white/10 group-hover:text-[#4ADE80]" />
+        {value && <span className="text-[10px] font-black uppercase tracking-widest text-text-muted group-hover:text-[#4ADE80] transition-colors">{value}</span>}
+        <ChevronRight size={14} className="text-text-muted/40 group-hover:text-[#4ADE80]" />
       </div>
     </button>
   );
@@ -1608,23 +1697,23 @@ function SettingItem({ icon, label, value, last, onClick }: { icon: any, label: 
 
 function ProfileDataCard({ label, value, icon }: { label: string, value: string, icon: any }) {
   return (
-    <div className="p-5 bg-[#121417] border border-white/5 rounded-3xl flex flex-col items-center justify-center relative overflow-hidden group">
+    <div className="p-5 bg-card-custom border border-border-custom rounded-3xl flex flex-col items-center justify-center relative overflow-hidden group">
       <div className="absolute top-2 right-2 opacity-20 group-hover:opacity-100 transition-opacity">
-        <Edit3 size={10} className="text-white" />
+        <Edit3 size={10} className="text-text-main" />
       </div>
       <div className="mb-2">{icon}</div>
-      <span className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-1">{label}</span>
-      <span className="text-sm font-black text-white tracking-tight">{value}</span>
+      <span className="text-[9px] font-black text-text-muted uppercase tracking-widest mb-1">{label}</span>
+      <span className="text-sm font-black text-text-main tracking-tight">{value}</span>
     </div>
   );
 }
 
 function Overlay({ title, onClose, children }: { title: string, onClose: () => void, children: React.ReactNode }) {
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-[#0A0B0D] z-[100] flex flex-col">
-      <header className="px-4 sm:px-6 py-6 sm:py-8 flex items-center justify-between border-b border-white/5">
-        <h2 className="text-sm sm:text-base font-black uppercase tracking-widest truncate mr-4">{title}</h2>
-        <button onClick={onClose} className="p-2 sm:p-3 bg-white/5 rounded-2xl border border-white/5 text-white/40 shrink-0"><X size={20} /></button>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-app-bg z-[100] flex flex-col">
+      <header className="px-4 sm:px-6 py-6 sm:py-8 flex items-center justify-between border-b border-border-custom">
+        <h2 className="text-sm sm:text-base font-black uppercase tracking-widest truncate mr-4 text-text-main">{title}</h2>
+        <button onClick={onClose} className="p-2 sm:p-3 bg-white/5 rounded-2xl border border-border-custom text-text-muted shrink-0"><X size={20} /></button>
       </header>
       <div className="flex-1 overflow-y-auto">
         {children}
@@ -1633,9 +1722,57 @@ function Overlay({ title, onClose, children }: { title: string, onClose: () => v
   );
 }
 
-function ScannerContent({ previewUrl, isAnalyzing, analysisError, scannerResult, onUpload, onConfirm, onAddToDiary, onClose, fileInputRef }: any) {
+function ScannerContent({ 
+  previewUrl, 
+  isAnalyzing, 
+  analysisError, 
+  scannerResult, 
+  onUpload, 
+  onConfirm, 
+  onAddToDiary, 
+  onClose, 
+  fileInputRef,
+  dailyLimitReached,
+  hoursToReset,
+  analysisTimer,
+  onUpgrade
+}: any) {
   const [selectedMealType, setSelectedMealType] = useState('almoço');
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  if (dailyLimitReached && !scannerResult) {
+    return (
+      <div className="p-8 h-full flex flex-col items-center justify-center text-center space-y-8">
+        <div className="w-32 h-32 bg-[#FF4F4F]/10 rounded-full flex items-center justify-center relative">
+          <div className="absolute inset-0 bg-[#FF4F4F]/20 rounded-full animate-ping" />
+          <Moon size={64} className="text-[#FF4F4F]" fill="#FF4F4F" fillOpacity={0.2} />
+        </div>
+        
+        <div className="space-y-3">
+          <h2 className="text-3xl font-black text-white leading-tight">O Teu Dia Acabou</h2>
+          <p className="text-white/40 text-sm font-medium leading-relaxed max-w-[280px] mx-auto">
+            Atingiste o limite de 2 análises diárias. Volta daqui a <span className="text-white font-black">{hoursToReset} horas</span> ou faz o Upgrade agora.
+          </p>
+        </div>
+
+        <div className="w-full space-y-4">
+          <button 
+            onClick={onUpgrade}
+            className="w-full py-5 bg-[#4ADE80] text-[#0A0B0D] font-black rounded-[28px] text-sm uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-[#4ADE80]/20 flex items-center justify-center gap-2"
+          >
+            <Star size={18} fill="#000" /> Upgrade Ilimitado
+          </button>
+          
+          <button 
+            onClick={onClose}
+            className="w-full py-5 bg-white/5 border border-white/10 text-white/60 font-black rounded-[28px] text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+          >
+            Fechar e Esperar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const mealTypes = [
     { id: 'café', label: 'Café da manhã', time: '7:00 - 10:00', ex: 'Ex: Papaia, pão, ovos', icon: <Sun size={18} /> },
@@ -1736,12 +1873,21 @@ function ScannerContent({ previewUrl, isAnalyzing, analysisError, scannerResult,
             {/* Bottom Actions */}
             <div className="space-y-2.5 pt-2 pb-20">
               <button 
+                disabled={analysisTimer > 0}
                 onClick={() => cameraInputRef.current?.click()}
-                className="w-full py-4 bg-[#4ADE80] text-[#0A0B0D] font-black rounded-[28px] flex items-center justify-center gap-3 shadow-2xl shadow-[#4ADE80]/10 hover:scale-[1.01] active:scale-[0.98] transition-all text-xs"
+                className={`w-full py-4 ${analysisTimer > 0 ? 'bg-white/5 text-white/20' : 'bg-[#4ADE80] text-[#0A0B0D]'} font-black rounded-[28px] flex items-center justify-center gap-3 shadow-2xl shadow-[#4ADE80]/10 hover:scale-[1.01] active:scale-[0.98] transition-all text-xs`}
               >
-                <Camera size={18} strokeWidth={3} /> CAPTURAR AGORA
+                {analysisTimer > 0 ? (
+                  <>Aguarde {analysisTimer}s...</>
+                ) : (
+                  <><Camera size={18} strokeWidth={3} /> CAPTURAR AGORA</>
+                )}
               </button>
-              <button onClick={() => fileInputRef.current?.click()} className="w-full py-4 border border-[#4ADE80]/30 text-[#4ADE80] font-black rounded-[28px] flex items-center justify-center gap-3 hover:bg-[#4ADE80]/5 transition-all text-[10px] uppercase tracking-widest">
+              <button 
+                disabled={analysisTimer > 0}
+                onClick={() => fileInputRef.current?.click()} 
+                className="w-full py-4 border border-[#4ADE80]/30 text-[#4ADE80] font-black rounded-[28px] flex items-center justify-center gap-3 hover:bg-[#4ADE80]/5 transition-all text-[10px] uppercase tracking-widest disabled:opacity-30"
+              >
                 <Scan size={18} strokeWidth={3} /> Identificação Rápida
               </button>
             </div>
