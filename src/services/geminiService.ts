@@ -13,12 +13,15 @@ const getRotatingKey = () => {
     import.meta.env.VITE_GEMINI_API_KEY_9,
   ].filter(key => !!key);
 
+  let key = "";
   if (keys.length === 0) {
-    return process.env.GEMINI_API_KEY; // Fallback para a chave padrão do sistema
+    key = process.env.GEMINI_API_KEY || "";
+  } else {
+    key = keys[Math.floor(Math.random() * keys.length)];
   }
 
-  // Pegar uma chave aleatória do pool para distribuir a carga
-  return keys[Math.floor(Math.random() * keys.length)];
+  // Remove caracteres que causam erro no Headers.append (não ISO-8859-1)
+  return key.trim().replace(/[^\x00-\x7F]/g, "");
 };
 
 const getAIInstance = () => {
@@ -59,7 +62,7 @@ export async function askNutritionAssistant(prompt: string, history: { role: 'us
   try {
     const ai = getAIInstance();
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.0-flash",
       contents: [...history, { role: 'user', parts: [{ text: prompt }] }],
       config: {
         systemInstruction: getSystemInstruction(profile),
@@ -117,7 +120,7 @@ DIRETRIZES DE SEGURANÇA E PERSONALIZAÇÃO:
     Responda em Português de Angola.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.0-flash",
       contents: { parts: [imagePart, { text: contextPrompt }] },
       config: {
         responseMimeType: "application/json",
