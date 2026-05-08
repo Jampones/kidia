@@ -1,12 +1,14 @@
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 const getAIInstance = () => {
   const apiKey = process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("API_KEY_MISSING");
   }
-  return new GoogleGenerativeAI(apiKey);
+  return new GoogleGenAI({ apiKey });
 };
+
+const MODEL_NAME = "gemini-3.1-flash-lite";
 
 const getSystemInstruction = (profile?: any) => {
   let context = "Você é o kidiaNutri, um Nutricionista Especialista Angolano e tecnológico. Responda em Português de Angola.";
@@ -36,23 +38,23 @@ const getSystemInstruction = (profile?: any) => {
 
 export async function askNutritionAssistant(prompt: string, history: { role: 'user' | 'model', parts: { text: string }[] }[] = [], profile?: any) {
   try {
-    const genAI = getAIInstance();
-    // Forçamos o modelo solicitado pelo usuário: gemini-2.0-flash
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash",
-      systemInstruction: getSystemInstruction(profile)
+    const ai = getAIInstance();
+    
+    const response = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: [
+        ...history.map(h => ({
+          role: h.role === 'model' ? 'model' : 'user',
+          parts: h.parts
+        })),
+        { role: 'user', parts: [{ text: prompt }] }
+      ],
+      config: {
+        systemInstruction: getSystemInstruction(profile)
+      }
     });
 
-    const chat = model.startChat({
-      history: history.map(h => ({
-        role: h.role === 'model' ? 'model' : 'user',
-        parts: h.parts
-      })),
-    });
-
-    const result = await chat.sendMessage(prompt);
-    const response = await result.response;
-    return response.text();
+    return response.text;
   } catch (error: any) {
     console.error("Gemini Chat Error:", error);
     if (error.message?.includes('429')) throw new Error('RATE_LIMIT_EXCEEDED');
@@ -63,27 +65,8 @@ export async function askNutritionAssistant(prompt: string, history: { role: 'us
 
 export async function analyzeFoodImage(base64Image: string, profile?: any, mealType?: string) {
   try {
-    const genAI = getAIInstance();
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: SchemaType.OBJECT,
-          properties: {
-            name: { type: SchemaType.STRING },
-            calories: { type: SchemaType.STRING },
-            protein: { type: SchemaType.STRING },
-            carbs: { type: SchemaType.STRING },
-            fat: { type: SchemaType.STRING },
-            healthTip: { type: SchemaType.STRING },
-            suggestion: { type: SchemaType.STRING }
-          },
-          required: ["name", "calories", "protein", "carbs", "fat", "healthTip", "suggestion"]
-        }
-      }
-    });
-
+    const ai = getAIInstance();
+    
     const imageData = base64Image.split(',')[1] || base64Image;
     const imagePart = {
       inlineData: {
@@ -126,10 +109,30 @@ DIRETRIZES DE SEGURANÇA E PERSONALIZAÇÃO:
     
     Responda em Português de Angola.`;
 
-    const result = await model.generateContent([contextPrompt, imagePart]);
-    const response = await result.response;
-    const text = response.text();
-    
+    const response = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: [
+        { parts: [{ text: contextPrompt }, imagePart] }
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING },
+            calories: { type: Type.STRING },
+            protein: { type: Type.STRING },
+            carbs: { type: Type.STRING },
+            fat: { type: Type.STRING },
+            healthTip: { type: Type.STRING },
+            suggestion: { type: Type.STRING }
+          },
+          required: ["name", "calories", "protein", "carbs", "fat", "healthTip", "suggestion"]
+        }
+      }
+    });
+
+    const text = response.text;
     if (!text) throw new Error("O modelo não retornou nenhuma resposta.");
     return JSON.parse(text);
   } catch (error: any) {
