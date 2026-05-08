@@ -224,10 +224,12 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
       let errorMessage = 'Falha na conexão.';
       if (error.message === 'API_KEY_MISSING') {
         errorMessage = 'Erro: Chave API do Gemini não configurada.';
+      } else if (error.message === 'RATE_LIMIT_EXCEEDED') {
+        errorMessage = 'Limite de uso atingido (5 RPM no Grátis). Aguarde um minuto e tente novamente.';
+      } else if (error.message === 'PERMISSION_DENIED') {
+        errorMessage = 'Erro de permissão: Verifique se a API está ativada no Google Cloud para este projeto.';
       } else if (error.message?.includes('429')) {
-        errorMessage = 'Limite de uso atingido. Tente novamente mais tarde.';
-      } else if (error.message?.includes('403')) {
-        errorMessage = 'Erro de permissão na API (Chave inválida ou bloqueada).';
+        errorMessage = 'Muitas solicitações. O Google limitou o uso temporariamente.';
       }
       setMessages(prev => [...prev, { role: 'model', text: errorMessage }]); 
     }
@@ -288,6 +290,10 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
       let errorMessage = error.message || "Erro na análise. Tente novamente.";
       if (error.message === 'API_KEY_MISSING') {
         errorMessage = "Chave API não configurada.";
+      } else if (error.message === 'RATE_LIMIT_EXCEEDED') {
+        errorMessage = "Limite de análise atingido (5 RPM). Aguarde um minuto.";
+      } else if (error.message === 'PERMISSION_DENIED') {
+        errorMessage = "Sem permissão na API (IAM/Cloud). Verifique seu projeto.";
       }
       setAnalysisError(errorMessage);
     }
