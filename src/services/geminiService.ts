@@ -1,9 +1,9 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 const getAIInstance = () => {
   const apiKey = process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error("Nenhuma chave API do Gemini configurada. Por favor, adicione a chave no ambiente.");
+    throw new Error("API_KEY_MISSING");
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -101,15 +101,15 @@ DIRETRIZES DE SEGURANÇA E PERSONALIZAÇÃO:
       config: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: "OBJECT",
+          type: Type.OBJECT,
           properties: {
-            name: { type: "STRING" },
-            calories: { type: "STRING" },
-            protein: { type: "STRING" },
-            carbs: { type: "STRING" },
-            fat: { type: "STRING" },
-            healthTip: { type: "STRING" },
-            suggestion: { type: "STRING" }
+            name: { type: Type.STRING },
+            calories: { type: Type.STRING },
+            protein: { type: Type.STRING },
+            carbs: { type: Type.STRING },
+            fat: { type: Type.STRING },
+            healthTip: { type: Type.STRING },
+            suggestion: { type: Type.STRING }
           },
           required: ["name", "calories", "protein", "carbs", "fat", "healthTip", "suggestion"]
         }

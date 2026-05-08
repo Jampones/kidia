@@ -217,10 +217,20 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
     await getClient().from('chat_messages').insert({ user_id: session.id, text: userMsg, sender: 'user' });
     try {
       const response = await askNutritionAssistant(userMsg, messages.map(m => ({ role: m.role, parts: [{ text: m.text }] })), userProfile);
-      const aiMsg = response || 'Erro no sistema';
+      const aiMsg = response || 'Erro no sistema: Resposta vazia';
       setMessages(prev => [...prev, { role: 'model', text: aiMsg }]);
       await getClient().from('chat_messages').insert({ user_id: session.id, text: aiMsg, sender: 'specialist' });
-    } catch (error) { setMessages(prev => [...prev, { role: 'model', text: 'Falha na conexão.' }]); }
+    } catch (error: any) { 
+      let errorMessage = 'Falha na conexão.';
+      if (error.message === 'API_KEY_MISSING') {
+        errorMessage = 'Erro: Chave API do Gemini não configurada.';
+      } else if (error.message?.includes('429')) {
+        errorMessage = 'Limite de uso atingido. Tente novamente mais tarde.';
+      } else if (error.message?.includes('403')) {
+        errorMessage = 'Erro de permissão na API (Chave inválida ou bloqueada).';
+      }
+      setMessages(prev => [...prev, { role: 'model', text: errorMessage }]); 
+    }
     finally { setIsTyping(false); }
   };
 
@@ -275,7 +285,11 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
       if (scanData) setScanHistory(prev => [scanData[0], ...prev]);
     } catch (error: any) { 
       console.error(error); 
-      setAnalysisError(error.message || "Erro na análise. Tente novamente.");
+      let errorMessage = error.message || "Erro na análise. Tente novamente.";
+      if (error.message === 'API_KEY_MISSING') {
+        errorMessage = "Chave API não configurada.";
+      }
+      setAnalysisError(errorMessage);
     }
     finally { 
       setIsAnalyzing(false); 
